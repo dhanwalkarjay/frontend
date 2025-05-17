@@ -9,8 +9,8 @@ interface UseDraggableOptions {
   onDragStart?: (x: number, y: number) => void;
   onDrag?: (x: number, y: number) => void;
   onDragEnd?: (x: number, y: number) => void;
-  bounds?: RefObject<HTMLElement | null>; 
-  elementRef: RefObject<HTMLElement | null>; 
+  bounds?: RefObject<HTMLElement | null>;
+  elementRef: RefObject<HTMLElement | null>;
 }
 
 export function useDraggable({
@@ -28,37 +28,42 @@ export function useDraggable({
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLElement> | MouseEvent) => {
     const target = e.target as HTMLElement;
+    const currentElement = elementRef.current;
 
-    // If the click target is an interactive element (input, button, etc.)
-    // AND that interactive element itself does NOT have the 'data-drag-handle' attribute,
-    // THEN we should prevent dragging by returning early.
-    // This allows an element <button data-drag-handle="true">Drag Me</button> to be draggable,
-    // but a simple <button> (like Delete/Edit) inside a draggable area to be clickable without dragging.
-    if (
-      target.matches('input, textarea, button, select, a[href]') &&
-      !target.hasAttribute('data-drag-handle')
-    ) {
-      // Do not start drag, let the interactive element handle the event.
-      // e.stopPropagation() might still be useful here if we want to prevent
-      // the CanvasElement's own onClick from firing for these specific interactions.
-      // For now, let's assume the default behavior is fine or handled by the button's own onClick.
+    // Check if the mousedown target is an interactive element (input, button, etc.)
+    // AND that interactive element itself does NOT have the 'data-drag-handle' attribute.
+    const isInteractiveElement = target.matches('input, textarea, button, select, a[href]');
+    const isTargetItselfDragHandle = target.hasAttribute('data-drag-handle');
+
+    if (isInteractiveElement && !isTargetItselfDragHandle) {
+      // This is an interactive element that is not meant to be a drag handle itself.
+      // Let its default action proceed (e.g., button click, focusing input).
+      // Do NOT call e.preventDefault() or start a drag.
+      // We also don't want to stop propagation here, to allow its own event handlers.
       return;
     }
-    
-    e.preventDefault(); // Prevent default actions like text selection during drag
-    e.stopPropagation(); // Stop event from bubbling further, especially to parent handlers
+
+    // If we reach here, the mousedown is on a draggable area or an explicit drag handle.
+    // Do NOT call e.preventDefault() here. It will be called in handleMouseMove if a drag actually occurs.
+    // This allows events like 'dblclick' to function correctly for initiating text editing.
+
+    // Stop propagation if the event originated on an element explicitly marked as a drag handle
+    // or the main draggable element, to prevent parent draggables (if any) or other listeners.
+    if (target.closest('[data-drag-handle="true"]')) {
+        e.stopPropagation();
+    }
+
 
     setIsDragging(true);
 
-    const elementRect = elementRef.current?.getBoundingClientRect();
-    
+    const elementRect = currentElement?.getBoundingClientRect();
     if (elementRect) {
         setOffsetFromElementOrigin({
             x: e.clientX - elementRect.left,
             y: e.clientY - elementRect.top,
         });
     } else {
-        setOffsetFromElementOrigin({ x: 0, y: 0}); 
+        setOffsetFromElementOrigin({ x: 0, y: 0});
     }
 
     onDragStart?.(position.x, position.y);
@@ -66,17 +71,19 @@ export function useDraggable({
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
+
+    // Prevent default actions (like text selection) ONLY when actually dragging.
     e.preventDefault();
     e.stopPropagation();
 
-    let newX = e.clientX; 
-    let newY = e.clientY; 
+    let newX = e.clientX;
+    let newY = e.clientY;
 
     if (bounds?.current && elementRef.current) {
       const boundsRect = bounds.current.getBoundingClientRect();
       const elementWidth = elementRef.current.offsetWidth;
       const elementHeight = elementRef.current.offsetHeight;
-      
+
       newX = (e.clientX - boundsRect.left) - offsetFromElementOrigin.x;
       newY = (e.clientY - boundsRect.top) - offsetFromElementOrigin.y;
 
@@ -85,20 +92,19 @@ export function useDraggable({
       newX = Math.min(boundsRect.width - elementWidth, newX);
       newY = Math.min(boundsRect.height - elementHeight, newY);
     } else {
-      newX = e.clientX - offsetFromElementOrigin.x; 
+      // Fallback for unbounded drag (or if somehow elementRef/bounds aren't set up as expected)
+      newX = e.clientX - offsetFromElementOrigin.x;
       newY = e.clientY - offsetFromElementOrigin.y;
     }
-    
+
     setPosition({ x: newX, y: newY });
     onDrag?.(newX, newY);
   }, [isDragging, offsetFromElementOrigin, onDrag, bounds, elementRef]);
 
   const handleMouseUp = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
-    // No e.preventDefault() here typically, as mouseup doesn't have many default actions to prevent for drag.
-    // e.stopPropagation() can be useful if there are global mouseup listeners to avoid.
-    e.stopPropagation(); 
-    
+    e.stopPropagation(); // Consistent with other handlers
+
     setIsDragging(false);
     onDragEnd?.(position.x, position.y);
   }, [isDragging, onDragEnd, position.x, position.y]);
@@ -118,7 +124,6 @@ export function useDraggable({
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
-    // Update internal position if initialX/initialY props change and not currently dragging
     if (!isDragging) {
       setPosition({ x: initialX, y: initialY });
     }
@@ -129,6 +134,6 @@ export function useDraggable({
     position,
     isDragging,
     handleMouseDown,
-    setPosition, 
+    setPosition,
   };
 }
