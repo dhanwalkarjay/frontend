@@ -39,14 +39,15 @@ import { cn } from "@/lib/utils"
 import html2canvas from 'html2canvas';
 
 const STICKERS = ['🎨', '💡', '🚀', '🌟', '🧩', '🎉', '✨', '😀', '😍', '👍', '💯', '🔥', '❤️', '✅', '⚠️'];
+const NEW_DEFAULT_FONT = 'Comic Sans MS, cursive, sans-serif';
 const FONT_OPTIONS = [
+  { value: NEW_DEFAULT_FONT, label: 'Comic Sans MS' },
   { value: 'Arial, sans-serif', label: 'Arial' },
   { value: 'Verdana, sans-serif', label: 'Verdana' },
   { value: 'Georgia, serif', label: 'Georgia' },
   { value: 'Times New Roman, Times, serif', label: 'Times New Roman' },
   { value: 'Courier New, Courier, monospace', label: 'Courier New' },
   { value: 'Impact, Charcoal, sans-serif', label: 'Impact' },
-  { value: 'Comic Sans MS, cursive, sans-serif', label: 'Comic Sans MS' },
 ];
 
 
@@ -61,12 +62,12 @@ export function SidebarTools() {
     clearBoard
   } = useCanvas();
   const { toast } = useToast();
-  const { open, toggleSidebar, isMobile, state } = useSidebar(); // Added state
+  const { open, toggleSidebar, isMobile, state } = useSidebar();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isStickerPopoverOpen, setIsStickerPopoverOpen] = useState(false);
 
   const desktopExpanded = !isMobile && open;
-  const desktopCollapsed = !isMobile && !open && state === 'collapsed'; // More specific for icon mode
+  const desktopCollapsed = !isMobile && !open && state === 'collapsed'; 
 
   const selectedElement = elements.find(el => el.id === selectedElementId);
 
@@ -85,7 +86,7 @@ export function SidebarTools() {
         toast({ title: "Image added", description: file.name });
       };
       reader.readAsDataURL(file);
-      if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = ""; 
     }
   };
 
@@ -104,10 +105,10 @@ export function SidebarTools() {
 
   const handleExport = async () => {
     toast({ title: "Preparing download..."});
-    const canvasToExport = document.getElementById('canvas-viewport-for-export'); // Changed target ID
+    const canvasToExport = document.getElementById('canvas-viewport-for-export'); 
     if (canvasToExport) {
       try {
-        const canvas = await html2canvas(canvasToExport, { // Use the new target
+        const canvas = await html2canvas(canvasToExport, { 
           useCORS: true,
           backgroundColor: null,
           scale: 2,
@@ -189,7 +190,6 @@ export function SidebarTools() {
             </div>
           )}
           { (desktopExpanded || isMobile) && <SidebarTrigger /> }
-          {/* Ensure SidebarTrigger for mobile is always present if sidebar is sheet-like */}
           { isMobile && !open && <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden"><PanelLeft /></Button> }
         </SidebarHeader>
         <SidebarSeparator />
@@ -244,7 +244,7 @@ export function SidebarTools() {
                   <Input
                     id="text-color-picker"
                     type="color"
-                    value={selectedElement.textColor?.startsWith('hsl') ? '#000000' : selectedElement.textColor || '#000000'} // Input type color expects hex
+                    value={selectedElement.textColor?.startsWith('hsl') ? '#000000' : selectedElement.textColor || '#000000'} 
                     onChange={(e) => handleUpdateTextColor(e.target.value)}
                     className="h-8 w-full"
                   />
@@ -252,7 +252,7 @@ export function SidebarTools() {
                 <div className="space-y-1">
                   <Label htmlFor="font-family-select" className="text-xs px-1">Font</Label>
                   <Select
-                    value={selectedElement.fontFamily || 'Arial, sans-serif'}
+                    value={selectedElement.fontFamily || NEW_DEFAULT_FONT}
                     onValueChange={handleUpdateFontFamily}
                   >
                     <SelectTrigger id="font-family-select" className="h-8 text-xs">

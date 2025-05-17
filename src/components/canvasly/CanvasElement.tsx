@@ -35,7 +35,6 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   });
 
   useEffect(() => {
-    // Only apply animation if the element is newly added
     if (elementRef.current && element.isNewlyAdded) {
       const el = elementRef.current;
       el.classList.add('animate-bounce-fade-in');
@@ -43,12 +42,12 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
         if (el.classList.contains('animate-bounce-fade-in')) {
           el.classList.remove('animate-bounce-fade-in');
         }
-        // Optionally, update the element to mark animation as complete
-        // updateElement(element.id, { isNewlyAdded: false });
+        // Mark animation as complete so it doesn't run again
+        updateElement(element.id, { isNewlyAdded: false });
       }, 700); // Animation duration is 0.7s
       return () => clearTimeout(timer);
     }
-  }, []); // Empty dependency array: runs once on mount. Conditionality is inside.
+  }, [element.isNewlyAdded, element.id, updateElement]);
 
 
   useEffect(() => {
@@ -147,7 +146,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
               style={{ 
                 fontSize: `${element.fontSize || 16}px`, 
                 color: element.textColor || 'hsl(var(--foreground))',
-                fontFamily: element.fontFamily || 'Arial, sans-serif',
+                fontFamily: element.fontFamily || 'Comic Sans MS, cursive, sans-serif',
               }}
               onClick={(e) => e.stopPropagation()} 
               onMouseDown={(e) => e.stopPropagation()} 
@@ -160,7 +159,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
             style={{ 
               fontSize: `${element.fontSize || 16}px`, 
               color: element.textColor || 'hsl(var(--foreground))',
-              fontFamily: element.fontFamily || 'Arial, sans-serif',
+              fontFamily: element.fontFamily || 'Comic Sans MS, cursive, sans-serif',
             }}
           >
             {element.content}

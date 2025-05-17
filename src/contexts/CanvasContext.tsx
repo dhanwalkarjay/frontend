@@ -1,11 +1,14 @@
 
 "use client"
 
-import type { CanvasElementData } from '@/types/canvas';
+import type { CanvasElementData, ElementType } from '@/types/canvas'; // Ensure ElementType is imported
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 
 const generateRobustId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 const LOCAL_STORAGE_KEY = 'canvaslyBoard_v1';
+const NEW_DEFAULT_FONT = 'Comic Sans MS, cursive, sans-serif';
+const OLD_DEFAULT_FONT_PATTERNS = ['Arial', 'Arial, sans-serif'];
+
 
 interface CanvasContextType {
   elements: CanvasElementData[];
@@ -41,7 +44,7 @@ const defaultInitialElements: CanvasElementData[] = [
   { 
     id: generateRobustId(), type: 'text', content: 'Welcome to Canvasly!', 
     x: 50, y: 50, width: 250, height: 50, rotation: 0, zIndex: 1, 
-    fontSize: 24, textColor: 'hsl(var(--foreground))', fontFamily: 'Arial',
+    fontSize: 24, textColor: 'hsl(var(--foreground))', fontFamily: NEW_DEFAULT_FONT,
     isNewlyAdded: true,
   },
   { 
@@ -74,12 +77,20 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
         if (savedState) {
           const parsedState: StoredCanvasState = JSON.parse(savedState);
           if (parsedState.elements && typeof parsedState.zoom === 'number' && parsedState.panOffset) {
-            setElements(parsedState.elements.map(el => ({
-              ...el,
-              fontFamily: el.fontFamily || 'Arial', 
-              textColor: el.textColor || 'hsl(var(--foreground))',
-              isNewlyAdded: false, // Mark loaded elements as not newly added
-            })));
+            setElements(parsedState.elements.map(el => {
+              let fontFamily = el.fontFamily;
+              if (el.type === 'text') {
+                if (!fontFamily || OLD_DEFAULT_FONT_PATTERNS.includes(fontFamily)) {
+                  fontFamily = NEW_DEFAULT_FONT;
+                }
+              }
+              return {
+                ...el,
+                fontFamily: fontFamily, 
+                textColor: el.textColor || 'hsl(var(--foreground))',
+                isNewlyAdded: false, // Mark loaded elements as not newly added
+              };
+            }));
             setZoomState(parsedState.zoom);
             setPanOffsetState(parsedState.panOffset);
             setSelectedElementId(parsedState.selectedElementId || null); 
@@ -130,7 +141,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
     const initialX = (viewportCenterX - panOffset.x - initialWidth / 2 ) / zoom;
     const initialY = (viewportCenterY - panOffset.y - initialHeight / 2) / zoom;
 
-    const newElementBase: Omit<CanvasElementData, 'content' | 'width' | 'height' | 'type'> & { type: ElementType, isNewlyAdded: boolean } = {
+    const newElementBase: Omit<CanvasElementData, 'content' | 'width' | 'height' | 'type' | 'fontFamily' | 'textColor' | 'fontSize' | 'stickerSize' | 'data-ai-hint'> & { type: ElementType, isNewlyAdded: boolean } = {
       id: newId,
       type,
       x: initialX,
@@ -152,7 +163,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
           height: 40,
           fontSize: 20,
           textColor: 'hsl(var(--foreground))',
-          fontFamily: 'Arial',
+          fontFamily: NEW_DEFAULT_FONT,
           ...partialData,
         };
         break;
