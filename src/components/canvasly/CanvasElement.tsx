@@ -35,6 +35,21 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   });
 
   useEffect(() => {
+    if (elementRef.current) {
+      const el = elementRef.current;
+      el.classList.add('animate-bounce-fade-in');
+      const timer = setTimeout(() => {
+        // Check if class is still present before removing, good practice
+        if (el.classList.contains('animate-bounce-fade-in')) {
+          el.classList.remove('animate-bounce-fade-in');
+        }
+      }, 700); // Animation duration is 0.7s
+      return () => clearTimeout(timer);
+    }
+  }, []); // Empty dependency array ensures this runs once on mount
+
+
+  useEffect(() => {
     if (isEditingText && textAreaRef.current) {
       textAreaRef.current.focus();
       textAreaRef.current.select();
@@ -87,8 +102,6 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     if (!isEditingText) { 
       handleMouseDown(e); 
     }
-    // Always select the element on mousedown if not already selected,
-    // unless it's while editing text (which is handled by the above check)
     if (selectedElementId !== element.id && !isEditingText) {
       selectElement(element.id);
     }
@@ -101,8 +114,6 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     if (selectedElementId !== element.id && !isEditingText) {
       selectElement(element.id);
     }
-    // For touch, dblclick is not standard. Maybe a long press or tap-to-edit button for mobile?
-    // For now, keeping dblclick for mouse.
   };
 
 
