@@ -10,7 +10,7 @@ const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 3;
 
 export function Canvas() {
-  const { elements, selectElement, zoom, setZoom, panOffset, setPanOffset } = useCanvas();
+  const { elements, selectedElementId, selectElement, zoom, setZoom, panOffset, setPanOffset } = useCanvas();
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
 
@@ -46,12 +46,14 @@ export function Canvas() {
   // Mouse Panning
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === canvasViewportRef.current || e.target === worldRef.current) {
-      selectElement(null);
+      if (selectedElementId !== null) { // Only deselect if something is selected
+         selectElement(null);
+      }
       setIsPanning(true);
       setPanStart({ x: e.clientX, y: e.clientY });
       setInitialPanOffset(panOffset);
     }
-  }, [selectElement, panOffset]);
+  }, [selectElement, panOffset, selectedElementId]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isPanning) return;
@@ -95,13 +97,15 @@ export function Canvas() {
   // Touch Panning
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length === 1 && (e.target === canvasViewportRef.current || e.target === worldRef.current)) {
-      e.preventDefault(); // Prevent scrolling page while panning canvas
-      selectElement(null);
+      e.preventDefault(); 
+      if (selectedElementId !== null) { // Only deselect if something is selected
+        selectElement(null);
+      }
       setIsPanningTouch(true);
       setPanStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
       setInitialPanOffset(panOffset);
     }
-  }, [selectElement, panOffset]);
+  }, [selectElement, panOffset, selectedElementId]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isPanningTouch || e.touches.length !== 1) return;
@@ -123,7 +127,7 @@ export function Canvas() {
   useEffect(() => {
     const viewport = canvasViewportRef.current;
     if (!viewport) return;
-    // Attach global touch listeners if panning by touch
+    
     if (isPanningTouch) {
       document.addEventListener('touchmove', handleTouchMove, { passive: false });
       document.addEventListener('touchend', handleTouchEnd);
@@ -150,7 +154,7 @@ export function Canvas() {
 
   return (
     <div
-      id="canvas-viewport-for-export" // Added ID for html2canvas target
+      id="canvas-viewport-for-export" 
       ref={canvasViewportRef}
       className={cn(
         "relative w-full h-full overflow-hidden bg-muted/30 shadow-inner select-none",
@@ -171,7 +175,7 @@ export function Canvas() {
         style={{
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
           transformOrigin: '0 0',
-          width: '1px',
+          width: '1px', // Style for the world container itself, elements are positioned within it
           height: '1px',
         }}
       >

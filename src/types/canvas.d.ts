@@ -22,4 +22,8 @@ export interface CanvasElementData {
 
   // For AI hint on images
   'data-ai-hint'?: string;
+
+  // For controlling initial animation
+  isNewlyAdded?: boolean;
 }
+

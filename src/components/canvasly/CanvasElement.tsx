@@ -35,18 +35,20 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   });
 
   useEffect(() => {
-    if (elementRef.current) {
+    // Only apply animation if the element is newly added
+    if (elementRef.current && element.isNewlyAdded) {
       const el = elementRef.current;
       el.classList.add('animate-bounce-fade-in');
       const timer = setTimeout(() => {
-        // Check if class is still present before removing, good practice
         if (el.classList.contains('animate-bounce-fade-in')) {
           el.classList.remove('animate-bounce-fade-in');
         }
+        // Optionally, update the element to mark animation as complete
+        // updateElement(element.id, { isNewlyAdded: false });
       }, 700); // Animation duration is 0.7s
       return () => clearTimeout(timer);
     }
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []); // Empty dependency array: runs once on mount. Conditionality is inside.
 
 
   useEffect(() => {

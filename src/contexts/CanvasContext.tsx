@@ -41,12 +41,14 @@ const defaultInitialElements: CanvasElementData[] = [
   { 
     id: generateRobustId(), type: 'text', content: 'Welcome to Canvasly!', 
     x: 50, y: 50, width: 250, height: 50, rotation: 0, zIndex: 1, 
-    fontSize: 24, textColor: 'hsl(var(--foreground))', fontFamily: 'Arial'
+    fontSize: 24, textColor: 'hsl(var(--foreground))', fontFamily: 'Arial',
+    isNewlyAdded: true,
   },
   { 
     id: generateRobustId(), type: 'image', content: 'https://placehold.co/300x200.png', 
     x: 150, y: 150, width: 300, height: 200, rotation: 0, zIndex: 2,
-    'data-ai-hint': 'abstract design'
+    'data-ai-hint': 'abstract design',
+    isNewlyAdded: true,
   },
 ];
 
@@ -54,7 +56,7 @@ interface StoredCanvasState {
   elements: CanvasElementData[];
   zoom: number;
   panOffset: { x: number; y: number };
-  selectedElementId?: string | null; // Make optional or handle if not present
+  selectedElementId?: string | null; 
 }
 
 export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
@@ -71,25 +73,25 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
         const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (savedState) {
           const parsedState: StoredCanvasState = JSON.parse(savedState);
-          // Validate parsedState
           if (parsedState.elements && typeof parsedState.zoom === 'number' && parsedState.panOffset) {
             setElements(parsedState.elements.map(el => ({
               ...el,
-              fontFamily: el.fontFamily || 'Arial', // ensure default if missing
-              textColor: el.textColor || 'hsl(var(--foreground))'
+              fontFamily: el.fontFamily || 'Arial', 
+              textColor: el.textColor || 'hsl(var(--foreground))',
+              isNewlyAdded: false, // Mark loaded elements as not newly added
             })));
             setZoomState(parsedState.zoom);
             setPanOffsetState(parsedState.panOffset);
-            setSelectedElementId(parsedState.selectedElementId || null); // Handle if it wasn't saved
+            setSelectedElementId(parsedState.selectedElementId || null); 
           } else {
-            setElements(defaultInitialElements); // Fallback if structure is wrong
+            setElements(defaultInitialElements.map(el => ({ ...el, isNewlyAdded: true })));
           }
         } else {
-          setElements(defaultInitialElements); // No saved state, use defaults
+           setElements(defaultInitialElements.map(el => ({ ...el, isNewlyAdded: true })));
         }
       } catch (error) {
         console.error("Failed to load canvas state from localStorage:", error);
-        setElements(defaultInitialElements); // Error, use defaults
+        setElements(defaultInitialElements.map(el => ({ ...el, isNewlyAdded: true })));
       }
       setIsLoaded(true);
     }
@@ -100,7 +102,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   }, [loadFromLocalStorage]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && isLoaded) { // Only save after initial load
+    if (typeof window !== 'undefined' && isLoaded) { 
       try {
         const stateToSave: StoredCanvasState = { elements, zoom, panOffset, selectedElementId };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
@@ -128,13 +130,14 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
     const initialX = (viewportCenterX - panOffset.x - initialWidth / 2 ) / zoom;
     const initialY = (viewportCenterY - panOffset.y - initialHeight / 2) / zoom;
 
-    const newElementBase = {
+    const newElementBase: Omit<CanvasElementData, 'content' | 'width' | 'height' | 'type'> & { type: ElementType, isNewlyAdded: boolean } = {
       id: newId,
       type,
       x: initialX,
       y: initialY,
       rotation: 0,
       zIndex: newZIndex,
+      isNewlyAdded: true, // Mark as newly added
     };
 
     let newElement: CanvasElementData;
@@ -143,6 +146,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
       case 'text':
         newElement = {
           ...newElementBase,
+          type: 'text',
           content: 'New Text',
           width: 150,
           height: 40,
@@ -155,6 +159,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
       case 'image':
         newElement = {
           ...newElementBase,
+          type: 'image',
           content: 'https://placehold.co/200x150.png', 
           width: 200,
           height: 150,
@@ -165,6 +170,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
       case 'sticker':
         newElement = {
           ...newElementBase,
+          type: 'sticker',
           content: '✨', 
           width: 60, 
           height: 60,
@@ -225,12 +231,12 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   }, []);
 
   const clearBoard = useCallback(() => {
-    setElements(defaultInitialElements);
+    setElements(defaultInitialElements.map(el => ({ ...el, isNewlyAdded: true })));
     setZoomState(1);
     setPanOffsetState({ x: 0, y: 0 });
     setSelectedElementId(null);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(LOCAL_STORAGE_KEY); // Also clear from LS
+      localStorage.removeItem(LOCAL_STORAGE_KEY); 
     }
   }, []);
 
