@@ -5,6 +5,7 @@ import { useCanvas } from '@/contexts/CanvasContext';
 import { CanvasElement } from './CanvasElement';
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { LayersIcon } from 'lucide-react';
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 3;
@@ -46,7 +47,7 @@ export function Canvas() {
   // Mouse Panning
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === canvasViewportRef.current || e.target === worldRef.current) {
-      if (selectedElementId !== null) { // Only deselect if something is selected
+      if (selectedElementId !== null) {
          selectElement(null);
       }
       setIsPanning(true);
@@ -98,7 +99,7 @@ export function Canvas() {
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length === 1 && (e.target === canvasViewportRef.current || e.target === worldRef.current)) {
       e.preventDefault(); 
-      if (selectedElementId !== null) { // Only deselect if something is selected
+      if (selectedElementId !== null) {
         selectElement(null);
       }
       setIsPanningTouch(true);
@@ -157,7 +158,7 @@ export function Canvas() {
       id="canvas-viewport-for-export" 
       ref={canvasViewportRef}
       className={cn(
-        "relative w-full h-full overflow-hidden bg-muted/30 shadow-inner select-none",
+        "relative w-full h-full overflow-hidden bg-gradient-to-br from-background to-muted/20 shadow-inner select-none",
         "p-0"
       )}
       onWheel={handleWheel}
@@ -175,7 +176,7 @@ export function Canvas() {
         style={{
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
           transformOrigin: '0 0',
-          width: '1px', // Style for the world container itself, elements are positioned within it
+          width: '1px', 
           height: '1px',
         }}
       >
@@ -188,8 +189,10 @@ export function Canvas() {
         ))}
       </div>
       {elements.length === 0 && (
-         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-lg pointer-events-none">
-            <p>Your canvas is empty. Add elements using the toolbar!</p>
+         <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground text-lg pointer-events-none space-y-2">
+            <LayersIcon className="w-16 h-16 opacity-50" />
+            <p className="font-medium">Your canvas is empty.</p>
+            <p className="text-sm">Add elements using the toolbar!</p>
          </div>
       )}
     </div>

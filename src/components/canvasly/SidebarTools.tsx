@@ -110,8 +110,8 @@ export function SidebarTools() {
       try {
         const canvas = await html2canvas(canvasToExport, { 
           useCORS: true,
-          backgroundColor: null,
-          scale: 2,
+          backgroundColor: null, // Use the actual background of the div
+          scale: 2, // Increase scale for better resolution
           logging: false,
         });
         const image = canvas.toDataURL('image/png');
@@ -187,7 +187,7 @@ export function SidebarTools() {
             <div className="flex items-center gap-2">
               <Settings2 className="h-6 w-6 text-primary" />
               <h2 className="font-semibold text-lg" style={{ fontFamily: 'Comic Sans MS, cursive, sans-serif' }}>
-                <span className="text-primary">Can</span><span style={{ color: 'hsl(var(--secondary))' }}>vasly</span>
+                <span className="text-primary">Can</span><span className="text-secondary">vasly</span>
               </h2>
             </div>
           )}
@@ -246,7 +246,7 @@ export function SidebarTools() {
                   <Input
                     id="text-color-picker"
                     type="color"
-                    value={selectedElement.textColor?.startsWith('hsl') ? '#000000' : selectedElement.textColor || '#000000'} 
+                    value={selectedElement.textColor?.startsWith('hsl') ? '#3D4C5F' : selectedElement.textColor || '#3D4C5F'} 
                     onChange={(e) => handleUpdateTextColor(e.target.value)}
                     className="h-8 w-full"
                   />
@@ -319,7 +319,7 @@ export function SidebarTools() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem className="mt-2">
-              <div className={cn("flex items-center gap-2", desktopCollapsed && "justify-center")}>
+              <div className={cn("flex items-center gap-2", desktopCollapsed ? "justify-center" : "justify-start")}>
                 <ThemeToggle className={cn(desktopCollapsed && "[&_button]:w-8 [&_button]:h-8")} />
                 <span className={cn("text-sm", desktopCollapsed && "hidden")}>Toggle Theme</span>
               </div>
