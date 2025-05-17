@@ -20,7 +20,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   const { updateElement, selectElement, selectedElementId, deleteElement } = useCanvas();
   const isSelected = selectedElementId === element.id;
   const elementRef = useRef<HTMLDivElement>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null); // Ref for the textarea
+  const textAreaRef = useRef<HTMLTextAreaElement>(null); 
   const [isEditingText, setIsEditingText] = useState(false);
   const [editText, setEditText] = useState(element.content);
 
@@ -34,17 +34,12 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     },
   });
 
-  // Effect to focus textarea when editing starts
   useEffect(() => {
     if (isEditingText && textAreaRef.current) {
       textAreaRef.current.focus();
-      // Optional: Select all text when starting to edit
-      // textAreaRef.current.select();
     }
   }, [isEditingText]);
 
-  // Sync editText with element.content if externally changed while not editing
-  // Or when starting to edit for the first time.
   useEffect(() => {
     if (!isEditingText) {
       setEditText(element.content);
@@ -60,7 +55,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   const handleDoubleClick = () => {
     if (element.type === 'text' && !isEditingText) {
       setIsEditingText(true);
-      setEditText(element.content); // Ensure editText is current content
+      setEditText(element.content); 
       if (selectedElementId !== element.id) {
         selectElement(element.id);
       }
@@ -83,7 +78,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     }
     if (e.key === 'Escape') {
       setIsEditingText(false);
-      setEditText(element.content); // Revert to original content on escape
+      setEditText(element.content); 
     }
   };
 
@@ -106,16 +101,15 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
         if (isEditingText) {
           return (
             <Textarea
-              ref={textAreaRef} // Assign ref
+              ref={textAreaRef}
               value={editText}
               onChange={handleTextEditChange}
               onBlur={handleTextEditBlur}
               onKeyDown={handleTextEditKeyDown}
-              // autoFocus // Removed in favor of useEffect-based focus
               className="w-full h-full p-1 bg-background border-dashed border-primary/50 resize-none focus:ring-1 focus:ring-primary text-foreground"
               style={{ fontSize: `${element.fontSize || 16}px`, color: element.textColor || 'hsl(var(--foreground))' }}
-              onClick={(e) => e.stopPropagation()} // Prevent canvas selection while editing
-              onMouseDown={(e) => e.stopPropagation()} // Prevent drag start while editing
+              onClick={(e) => e.stopPropagation()} 
+              onMouseDown={(e) => e.stopPropagation()}
             />
           );
         }
@@ -147,10 +141,11 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
       className={cn(
         "absolute cursor-grab select-none group",
         "flex items-center justify-center",
-        "shadow-md hover:shadow-lg transition-shadow duration-200",
-        "bg-card/70 backdrop-blur-sm rounded-md border border-transparent",
-        isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background z-[999] !shadow-xl border-primary/50",
-        !isSelected && "hover:border-primary/30",
+        "transition-all duration-200 ease-in-out", // Added for smooth transitions
+        "bg-card/70 backdrop-blur-sm rounded-md",
+        isSelected 
+          ? "ring-2 ring-primary ring-offset-1 ring-offset-background z-[999] shadow-xl border-primary/50" 
+          : "shadow-md hover:shadow-lg border border-transparent hover:border-primary/30",
         element.type === 'text' && !isEditingText && "hover:bg-accent/20"
       )}
       style={{
@@ -181,7 +176,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
             size="icon"
             className="absolute -top-4 -right-4 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={handleDelete}
-            onMouseDown={(e) => e.stopPropagation()} // Prevent drag, allow click
+            onMouseDown={(e) => e.stopPropagation()} 
             aria-label="Delete element"
           >
             <Trash2Icon className="h-4 w-4" />
@@ -192,7 +187,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
               size="icon"
               className="absolute -bottom-4 -right-4 h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => { e.stopPropagation(); handleDoubleClick();}}
-              onMouseDown={(e) => e.stopPropagation()} // Prevent drag, allow click
+              onMouseDown={(e) => e.stopPropagation()}
               aria-label="Edit text"
             >
               <Edit3Icon className="h-4 w-4" />

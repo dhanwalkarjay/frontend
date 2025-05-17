@@ -51,7 +51,7 @@ export function Canvas() {
       setIsPanning(true);
       setPanStart({ x: e.clientX, y: e.clientY });
       setInitialPanOffset(panOffset); // Store panOffset at the start of panning
-      canvasViewportRef.current?.style.setProperty('cursor', 'grabbing');
+      // Cursor will be set in useEffect
     }
   }, [selectElement, panOffset]);
 
@@ -69,21 +69,21 @@ export function Canvas() {
   const handleMouseUp = useCallback(() => {
     if (isPanning) {
       setIsPanning(false);
-      canvasViewportRef.current?.style.setProperty('cursor', 'grab');
+      // Cursor will be reset in useEffect
     }
   }, [isPanning]);
   
   useEffect(() => {
     const viewport = canvasViewportRef.current;
-    if (viewport) {
-      viewport.style.cursor = 'grab'; // Initial cursor for panning
-    }
+    if (!viewport) return;
 
     if (isPanning) {
+      viewport.style.cursor = 'grabbing';
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = 'none'; // Prevent text selection during pan
     } else {
+      viewport.style.cursor = 'grab'; // Default cursor for panning
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = '';
@@ -94,10 +94,17 @@ export function Canvas() {
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = '';
       if (viewport) {
-        viewport.style.cursor = 'default';
+        viewport.style.cursor = 'default'; // Or 'grab' if you want it to persist
       }
     };
   }, [isPanning, handleMouseMove, handleMouseUp]);
+
+  // Set initial cursor
+  useEffect(() => {
+    if (canvasViewportRef.current) {
+      canvasViewportRef.current.style.cursor = 'grab';
+    }
+  }, []);
 
 
   return (

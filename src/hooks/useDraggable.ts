@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, RefObject } from 'react';
-import { useCanvas } from '@/contexts/CanvasContext'; // Import useCanvas
+import { useCanvas } from '@/contexts/CanvasContext'; 
 
 interface UseDraggableOptions {
   initialX: number;
@@ -10,7 +10,7 @@ interface UseDraggableOptions {
   onDragStart?: (x: number, y: number) => void;
   onDrag?: (x: number, y: number) => void;
   onDragEnd?: (x: number, y: number) => void;
-  bounds?: RefObject<HTMLElement | null>; // This is the viewport
+  bounds?: RefObject<HTMLElement | null>; 
   elementRef: RefObject<HTMLElement | null>;
 }
 
@@ -27,34 +27,36 @@ export function useDraggable({
   onDragStart,
   onDrag,
   onDragEnd,
-  bounds, // Viewport reference
+  bounds, 
   elementRef,
 }: UseDraggableOptions) {
-  const { zoom, panOffset } = useCanvas(); // Get zoom and panOffset from context
+  const { zoom, panOffset } = useCanvas(); 
 
-  const [position, setPosition] = useState({ x: initialX, y: initialY }); // World coordinates
+  const [position, setPosition] = useState({ x: initialX, y: initialY }); 
   const [isDragging, setIsDragging] = useState(false);
-  // No longer need offsetFromElementOrigin, will use a different approach
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
 
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLElement> | MouseEvent) => {
     const target = e.target as HTMLElement;
     
-    const isInteractiveElement = target.matches('input, textarea, button, select, a[href]');
-    const isTargetItselfDragHandle = target.hasAttribute('data-drag-handle');
+    // Allow mousedown for interactive elements (buttons, inputs etc. inside the draggable)
+    // unless the mousedown target itself is explicitly marked as a drag handle.
+    const isInteractiveElement = target.closest('button, input, textarea, select, a[href]');
+    const isTargetItselfDragHandle = target.getAttribute('data-drag-handle') === 'true';
 
     if (isInteractiveElement && !isTargetItselfDragHandle) {
-      return; 
+      return;
     }
-    // Do not call e.preventDefault() here for dblclick to work
+    // Do not call e.preventDefault() universally here, to allow double-clicks and focus.
+    // It will be called in handleMouseMove if a drag actually starts.
     
     setIsDragging(true);
     
     setDragOrigin({
       startClientX: e.clientX,
       startClientY: e.clientY,
-      startWorldX: position.x, // Current world position of the element
+      startWorldX: position.x, 
       startWorldY: position.y,
     });
 
@@ -64,7 +66,7 @@ export function useDraggable({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !dragOrigin) return;
 
-    e.preventDefault();
+    e.preventDefault(); // Prevent text selection etc. *during* drag
     e.stopPropagation();
 
     const currentClientX = e.clientX;
@@ -73,7 +75,6 @@ export function useDraggable({
     const deltaClientX = currentClientX - dragOrigin.startClientX;
     const deltaClientY = currentClientY - dragOrigin.startClientY;
 
-    // Scale client delta by zoom to get world delta
     const deltaWorldX = deltaClientX / zoom;
     const deltaWorldY = deltaClientY / zoom;
 
@@ -81,21 +82,17 @@ export function useDraggable({
     let newWorldY = dragOrigin.startWorldY + deltaWorldY;
 
     if (bounds?.current && elementRef.current) {
-      const boundsRect = bounds.current.getBoundingClientRect(); // Viewport rect
-      const elementWidth = elementRef.current.offsetWidth; // World width
-      const elementHeight = elementRef.current.offsetHeight; // World height
+      const boundsRect = bounds.current.getBoundingClientRect(); 
+      const elementWidth = elementRef.current.offsetWidth; 
+      const elementHeight = elementRef.current.offsetHeight;
 
-      // Calculate min/max world coordinates for the element's top-left corner
-      // such that the element remains entirely within the viewport
       const minWorldX = (-panOffset.x / zoom);
       const minWorldY = (-panOffset.y / zoom);
       const maxWorldX = (boundsRect.width - panOffset.x) / zoom - elementWidth;
       const maxWorldY = (boundsRect.height - panOffset.y) / zoom - elementHeight;
       
-      newWorldX = Math.max(minWorldX, newWorldX);
-      newWorldY = Math.max(minWorldY, newWorldY);
-      newWorldX = Math.min(maxWorldX, newWorldX);
-      newWorldY = Math.min(maxWorldY, newWorldY);
+      newWorldX = Math.max(minWorldX, Math.min(maxWorldX, newWorldX));
+      newWorldY = Math.max(minWorldY, Math.min(maxWorldY, newWorldY));
     }
     
     setPosition({ x: newWorldX, y: newWorldY });
@@ -107,7 +104,7 @@ export function useDraggable({
     
     setIsDragging(false);
     setDragOrigin(null);
-    onDragEnd?.(position.x, position.y); // position is already updated world coords
+    onDragEnd?.(position.x, position.y); 
   }, [isDragging, onDragEnd, position.x, position.y]);
 
   useEffect(() => {
@@ -115,19 +112,21 @@ export function useDraggable({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = 'none'; 
+      document.body.style.cursor = 'grabbing'; // Set body cursor to grabbing
     } else {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = '';
+      document.body.style.cursor = ''; // Revert body cursor
     }
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = '';
+      document.body.style.cursor = ''; // Ensure cleanup on unmount
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  // Effect to update position if initialX/initialY change externally AND not dragging
   useEffect(() => {
     if (!isDragging) {
       setPosition({ x: initialX, y: initialY });
@@ -136,7 +135,7 @@ export function useDraggable({
 
 
   return {
-    position, // This is in world coordinates
+    position, 
     isDragging,
     handleMouseDown,
     setPosition, 
