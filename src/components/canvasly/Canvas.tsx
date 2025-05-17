@@ -46,10 +46,10 @@ export function Canvas() {
   // Mouse Panning
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === canvasViewportRef.current || e.target === worldRef.current) {
-      selectElement(null); 
+      selectElement(null);
       setIsPanning(true);
       setPanStart({ x: e.clientX, y: e.clientY });
-      setInitialPanOffset(panOffset); 
+      setInitialPanOffset(panOffset);
     }
   }, [selectElement, panOffset]);
 
@@ -68,7 +68,7 @@ export function Canvas() {
       setIsPanning(false);
     }
   }, [isPanning]);
-  
+
   useEffect(() => {
     const viewport = canvasViewportRef.current;
     if (!viewport) return;
@@ -79,7 +79,7 @@ export function Canvas() {
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = 'none';
     } else {
-      viewport.style.cursor = 'grab'; 
+      viewport.style.cursor = 'grab';
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = '';
@@ -150,27 +150,28 @@ export function Canvas() {
 
   return (
     <div
+      id="canvas-viewport-for-export" // Added ID for html2canvas target
       ref={canvasViewportRef}
       className={cn(
         "relative w-full h-full overflow-hidden bg-muted/30 shadow-inner select-none",
-        "p-0" 
+        "p-0"
       )}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      style={{ 
-        minHeight: '100%', 
+      style={{
+        minHeight: '100%',
         height: '100%'
       }}
     >
       <div
-        id="canvas-world-ref" // ID for html2canvas
+        id="canvas-world-ref"
         ref={worldRef}
-        className="absolute top-0 left-0" 
+        className="absolute top-0 left-0"
         style={{
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
-          transformOrigin: '0 0', 
-          width: '1px', 
+          transformOrigin: '0 0',
+          width: '1px',
           height: '1px',
         }}
       >

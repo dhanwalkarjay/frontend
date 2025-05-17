@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input"
 
 import { ThemeToggle } from "./ThemeToggle"
 import { useCanvas } from "@/contexts/CanvasContext"
-import { ImageIcon, SmileIcon, TypeIcon, Trash2Icon, DownloadIcon, Settings2, RefreshCwIcon, SaveIcon, UploadCloudIcon } from "lucide-react"
+import { ImageIcon, SmileIcon, TypeIcon, Trash2Icon, DownloadIcon, Settings2, RefreshCwIcon, SaveIcon, UploadCloudIcon, PanelLeft } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { CanvasElementData } from "@/types/canvas"
 import { Button } from "@/components/ui/button"
@@ -51,22 +51,22 @@ const FONT_OPTIONS = [
 
 
 export function SidebarTools() {
-  const { 
-    elements, 
-    addElement, 
-    deleteElement, 
-    selectedElementId, 
-    updateElement, 
+  const {
+    elements,
+    addElement,
+    deleteElement,
+    selectedElementId,
+    updateElement,
     loadFromLocalStorage,
     clearBoard
   } = useCanvas();
   const { toast } = useToast();
-  const { open, toggleSidebar, isMobile } = useSidebar();
+  const { open, toggleSidebar, isMobile, state } = useSidebar(); // Added state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isStickerPopoverOpen, setIsStickerPopoverOpen] = useState(false);
 
   const desktopExpanded = !isMobile && open;
-  const desktopCollapsed = !isMobile && !open;
+  const desktopCollapsed = !isMobile && !open && state === 'collapsed'; // More specific for icon mode
 
   const selectedElement = elements.find(el => el.id === selectedElementId);
 
@@ -88,7 +88,7 @@ export function SidebarTools() {
       if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
     }
   };
-  
+
   const handleAddSticker = (sticker: string) => {
     addElement('sticker', { content: sticker });
     setIsStickerPopoverOpen(false);
@@ -104,13 +104,13 @@ export function SidebarTools() {
 
   const handleExport = async () => {
     toast({ title: "Preparing download..."});
-    const canvasWorld = document.getElementById('canvas-world-ref'); // Ensure your Canvas component's world div has this ID
-    if (canvasWorld) {
+    const canvasToExport = document.getElementById('canvas-viewport-for-export'); // Changed target ID
+    if (canvasToExport) {
       try {
-        const canvas = await html2canvas(canvasWorld, { 
-          useCORS: true, // Important for external images
-          backgroundColor: null, // To capture transparency or canvas background
-          scale: 2, // Increase scale for better resolution
+        const canvas = await html2canvas(canvasToExport, { // Use the new target
+          useCORS: true,
+          backgroundColor: null,
+          scale: 2,
           logging: false,
         });
         const image = canvas.toDataURL('image/png');
@@ -126,7 +126,7 @@ export function SidebarTools() {
         toast({ variant: "destructive", title: "Export failed", description: "Could not generate image." });
       }
     } else {
-      toast({ variant: "destructive", title: "Export failed", description: "Canvas element not found." });
+      toast({ variant: "destructive", title: "Export failed", description: "Canvas export target element not found." });
     }
   };
 
@@ -166,19 +166,19 @@ export function SidebarTools() {
         className="hidden"
       />
       <Sidebar collapsible="icon" className="border-r shadow-md">
-        <SidebarHeader 
+        <SidebarHeader
           className={cn(
             "p-4 items-center flex-row",
-            desktopExpanded || isMobile ? "justify-between" : "justify-center" 
+            (desktopExpanded || isMobile) ? "justify-between" : "justify-center"
           )}
         >
-          {desktopCollapsed ? (
+          {desktopCollapsed && !isMobile ? (
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
               aria-label="Expand sidebar"
-              className="h-8 w-8 hover:bg-transparent" 
+              className="h-8 w-8 hover:bg-transparent"
             >
               <Settings2 className="h-6 w-6 text-primary" />
             </Button>
@@ -189,6 +189,8 @@ export function SidebarTools() {
             </div>
           )}
           { (desktopExpanded || isMobile) && <SidebarTrigger /> }
+          {/* Ensure SidebarTrigger for mobile is always present if sidebar is sheet-like */}
+          { isMobile && !open && <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden"><PanelLeft /></Button> }
         </SidebarHeader>
         <SidebarSeparator />
         <SidebarContent className="p-2">
@@ -210,11 +212,11 @@ export function SidebarTools() {
                 <PopoverContent className="w-auto p-2" side="right" align="start">
                   <div className="grid grid-cols-5 gap-1">
                     {STICKERS.map(sticker => (
-                      <Button 
-                        key={sticker} 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-2xl w-10 h-10" 
+                      <Button
+                        key={sticker}
+                        variant="ghost"
+                        size="icon"
+                        className="text-2xl w-10 h-10"
                         onClick={() => handleAddSticker(sticker)}
                       >
                         {sticker}
