@@ -158,11 +158,11 @@ export function Canvas() {
       id="canvas-viewport-for-export" 
       ref={canvasViewportRef}
       className={cn(
-        "relative w-full h-full overflow-hidden bg-background shadow-inner select-none", // Removed gradient, ensure bg-background
+        "relative w-full h-full overflow-hidden bg-background shadow-inner select-none",
         "p-0"
       )}
       style={{
-        backgroundImage: `radial-gradient(hsl(var(--border)) 0.5px, transparent 0.5px)`, // Dot pattern
+        backgroundImage: `radial-gradient(hsl(var(--border)) 1px, transparent 1px)`, // Dot pattern - Increased dot size
         backgroundSize: '15px 15px', // Dot spacing
         minHeight: '100%',
         height: '100%'
