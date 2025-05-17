@@ -14,7 +14,8 @@ export interface CanvasElementData {
   
   // Text-specific properties
   fontSize?: number; // e.g., 16
-  textColor?: string; // e.g., '#000000'
+  textColor?: string; // e.g., '#000000' or 'hsl(var(--foreground))'
+  fontFamily?: string; // e.g., 'Arial', 'Verdana'
 
   // Sticker-specific properties (could be part of general styling)
   stickerSize?: number; // For font-size based stickers

@@ -24,7 +24,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   const [isEditingText, setIsEditingText] = useState(false);
   const [editText, setEditText] = useState(element.content);
 
-  const { position, handleMouseDown } = useDraggable({
+  const { position, handleMouseDown, handleTouchStartDraggable } = useDraggable({
     initialX: element.x,
     initialY: element.y,
     elementRef,
@@ -37,7 +37,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   useEffect(() => {
     if (isEditingText && textAreaRef.current) {
       textAreaRef.current.focus();
-      textAreaRef.current.select(); // Select text for easier editing
+      textAreaRef.current.select();
     }
   }, [isEditingText]);
 
@@ -82,6 +82,29 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
       setEditText(element.content); 
     }
   };
+  
+  const handleElementMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isEditingText) { 
+      handleMouseDown(e); 
+    }
+    // Always select the element on mousedown if not already selected,
+    // unless it's while editing text (which is handled by the above check)
+    if (selectedElementId !== element.id && !isEditingText) {
+      selectElement(element.id);
+    }
+  };
+
+  const handleElementTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isEditingText) {
+      handleTouchStartDraggable(e);
+    }
+    if (selectedElementId !== element.id && !isEditingText) {
+      selectElement(element.id);
+    }
+    // For touch, dblclick is not standard. Maybe a long press or tap-to-edit button for mobile?
+    // For now, keeping dblclick for mouse.
+  };
+
 
   const renderContent = () => {
     switch (element.type) {
@@ -108,16 +131,24 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
               onBlur={handleTextEditBlur}
               onKeyDown={handleTextEditKeyDown}
               className="w-full h-full p-1 bg-background border-dashed border-primary/50 resize-none focus:ring-1 focus:ring-primary text-foreground"
-              style={{ fontSize: `${element.fontSize || 16}px`, color: element.textColor || 'hsl(var(--foreground))' }}
+              style={{ 
+                fontSize: `${element.fontSize || 16}px`, 
+                color: element.textColor || 'hsl(var(--foreground))',
+                fontFamily: element.fontFamily || 'Arial, sans-serif',
+              }}
               onClick={(e) => e.stopPropagation()} 
-              onMouseDown={(e) => e.stopPropagation()} // Prevent drag while editing text
+              onMouseDown={(e) => e.stopPropagation()} 
             />
           );
         }
         return (
           <div
             className="w-full h-full flex items-center justify-center p-1 break-words overflow-hidden whitespace-pre-wrap select-none"
-            style={{ fontSize: `${element.fontSize || 16}px`, color: element.textColor || 'hsl(var(--foreground))' }}
+            style={{ 
+              fontSize: `${element.fontSize || 16}px`, 
+              color: element.textColor || 'hsl(var(--foreground))',
+              fontFamily: element.fontFamily || 'Arial, sans-serif',
+            }}
           >
             {element.content}
           </div>
@@ -140,9 +171,8 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     <div
       ref={elementRef}
       className={cn(
-        "absolute cursor-move select-none group", // Changed cursor-grab to cursor-move
+        "absolute cursor-move select-none group",
         "flex items-center justify-center",
-        // "transition-all duration-200 ease-in-out", // Removed for instant style changes
         "bg-card/70 backdrop-blur-sm rounded-md",
         isSelected 
           ? "ring-2 ring-primary ring-offset-1 ring-offset-background z-[999] shadow-xl border-primary/50" 
@@ -157,14 +187,8 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
         transform: `rotate(${element.rotation}deg)`,
         zIndex: element.zIndex,
       }}
-      onMouseDown={(e) => {
-        if (!isEditingText) { 
-          handleMouseDown(e); 
-        }
-        if (selectedElementId !== element.id) {
-          selectElement(element.id);
-        }
-      }}
+      onMouseDown={handleElementMouseDown}
+      onTouchStart={handleElementTouchStart}
       onDoubleClick={element.type === 'text' && !isEditingText ? handleDoubleClick : undefined}
       data-element-id={element.id}
       data-drag-handle="true"
@@ -175,7 +199,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
           <Button
             variant="default"
             size="icon"
-            className="absolute -top-4 -right-4 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100" // Removed transition-opacity as parent transition is gone
+            className="absolute -top-4 -right-4 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100"
             onClick={handleDelete}
             onMouseDown={(e) => e.stopPropagation()} 
             aria-label="Delete element"
@@ -186,7 +210,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
              <Button
               variant="default"
               size="icon"
-              className="absolute -bottom-4 -right-4 h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100" // Removed transition-opacity
+              className="absolute -bottom-4 -right-4 h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100"
               onClick={(e) => { e.stopPropagation(); handleDoubleClick();}}
               onMouseDown={(e) => e.stopPropagation()}
               aria-label="Edit text"

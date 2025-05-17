@@ -2,9 +2,10 @@
 "use client"
 
 import type { CanvasElementData } from '@/types/canvas';
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 
 const generateRobustId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
+const LOCAL_STORAGE_KEY = 'canvaslyBoard_v1';
 
 interface CanvasContextType {
   elements: CanvasElementData[];
@@ -18,6 +19,8 @@ interface CanvasContextType {
   bringToFront: (id: string) => void;
   setZoom: (zoomLevel: number | ((prevZoom: number) => number)) => void;
   setPanOffset: (offset: { x: number; y: number } | ((prevOffset: { x: number; y: number }) => { x: number; y: number })) => void;
+  loadFromLocalStorage: () => void;
+  clearBoard: () => void;
 }
 
 const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
@@ -34,11 +37,11 @@ interface CanvasProviderProps {
   children: ReactNode;
 }
 
-const initialElements: CanvasElementData[] = [
+const defaultInitialElements: CanvasElementData[] = [
   { 
     id: generateRobustId(), type: 'text', content: 'Welcome to Canvasly!', 
     x: 50, y: 50, width: 250, height: 50, rotation: 0, zIndex: 1, 
-    fontSize: 24, textColor: 'hsl(var(--foreground))'
+    fontSize: 24, textColor: 'hsl(var(--foreground))', fontFamily: 'Arial'
   },
   { 
     id: generateRobustId(), type: 'image', content: 'https://placehold.co/300x200.png', 
@@ -47,27 +50,83 @@ const initialElements: CanvasElementData[] = [
   },
 ];
 
+interface StoredCanvasState {
+  elements: CanvasElementData[];
+  zoom: number;
+  panOffset: { x: number; y: number };
+  selectedElementId?: string | null; // Make optional or handle if not present
+}
+
 export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
-  const [elements, setElements] = useState<CanvasElementData[]>(initialElements);
+  const [elements, setElements] = useState<CanvasElementData[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [zoom, setZoomState] = useState<number>(1);
   const [panOffset, setPanOffsetState] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isLoaded, setIsLoaded] = useState(false);
+
+
+  const loadFromLocalStorage = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedState) {
+          const parsedState: StoredCanvasState = JSON.parse(savedState);
+          // Validate parsedState
+          if (parsedState.elements && typeof parsedState.zoom === 'number' && parsedState.panOffset) {
+            setElements(parsedState.elements.map(el => ({
+              ...el,
+              fontFamily: el.fontFamily || 'Arial', // ensure default if missing
+              textColor: el.textColor || 'hsl(var(--foreground))'
+            })));
+            setZoomState(parsedState.zoom);
+            setPanOffsetState(parsedState.panOffset);
+            setSelectedElementId(parsedState.selectedElementId || null); // Handle if it wasn't saved
+          } else {
+            setElements(defaultInitialElements); // Fallback if structure is wrong
+          }
+        } else {
+          setElements(defaultInitialElements); // No saved state, use defaults
+        }
+      } catch (error) {
+        console.error("Failed to load canvas state from localStorage:", error);
+        setElements(defaultInitialElements); // Error, use defaults
+      }
+      setIsLoaded(true);
+    }
+  }, []);
+  
+  useEffect(() => {
+    loadFromLocalStorage();
+  }, [loadFromLocalStorage]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isLoaded) { // Only save after initial load
+      try {
+        const stateToSave: StoredCanvasState = { elements, zoom, panOffset, selectedElementId };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+      } catch (error) {
+        console.error("Failed to save canvas state to localStorage:", error);
+      }
+    }
+  }, [elements, zoom, panOffset, selectedElementId, isLoaded]);
+
 
   const getHighestZIndex = useCallback(() => {
-    return elements.reduce((maxZ, el) => Math.max(maxZ, el.zIndex), 0);
+    return elements.reduce((maxZ, el) => Math.max(maxZ, el.zIndex || 0), 0);
   }, [elements]);
 
   const addElement = useCallback((type: CanvasElementData['type'], partialData?: Partial<CanvasElementData>) => {
     const newZIndex = getHighestZIndex() + 1;
     const newId = generateRobustId();
     
-    // Adjust initial position based on current pan and zoom to appear in viewport center (approx)
-    const viewportCenterX = (typeof window !== "undefined" ? window.innerWidth / 2 : 400); // Approx fallback
-    const viewportCenterY = (typeof window !== "undefined" ? window.innerHeight / 2 : 300); // Approx fallback
+    const viewportCenterX = (typeof window !== "undefined" ? window.innerWidth / 2 : 400);
+    const viewportCenterY = (typeof window !== "undefined" ? window.innerHeight / 2 : 300);
     
-    const initialX = (viewportCenterX - panOffset.x - (partialData?.width || (type === 'image' ? 200 : 150))/2 ) / zoom;
-    const initialY = (viewportCenterY - panOffset.y - (partialData?.height || (type === 'image' ? 150 : 40))/2) / zoom;
+    const initialWidth = partialData?.width || (type === 'image' ? 200 : 150);
+    const initialHeight = partialData?.height || (type === 'text' ? 40 : (type === 'sticker' ? 60 : 150));
 
+    const initialX = (viewportCenterX - panOffset.x - initialWidth / 2 ) / zoom;
+    const initialY = (viewportCenterY - panOffset.y - initialHeight / 2) / zoom;
 
     const newElementBase = {
       id: newId,
@@ -89,6 +148,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
           height: 40,
           fontSize: 20,
           textColor: 'hsl(var(--foreground))',
+          fontFamily: 'Arial',
           ...partialData,
         };
         break;
@@ -143,12 +203,8 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
           if (el.id === id) {
             return { ...el, zIndex: highestZIndex + 1 };
           }
-          // Lower zIndex of other elements if they are above the new highest to avoid gaps, optional
-          // else if (el.zIndex > currentElement.zIndex && el.zIndex <= highestZIndex) {
-          //  return { ...el, zIndex: el.zIndex -1 };
-          // }
           return el;
-        }).sort((a,b) => a.zIndex - b.zIndex) // Re-sort might be good if complex z-index logic is added
+        }).sort((a,b) => (a.zIndex || 0) - (b.zIndex || 0))
       );
     }
   }, [elements, getHighestZIndex]);
@@ -160,14 +216,23 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
     }
   }, [bringToFront]);
 
-  const setZoom = useCallback((zoomLevel: number | ((prevZoom: number) => number)) => {
+  const setZoomCb = useCallback((zoomLevel: number | ((prevZoom: number) => number)) => {
     setZoomState(zoomLevel);
   }, []);
 
-  const setPanOffset = useCallback((offset: { x: number; y: number } | ((prevOffset: {x:number; y:number}) => {x:number; y:number})) => {
+  const setPanOffsetCb = useCallback((offset: { x: number; y: number } | ((prevOffset: {x:number; y:number}) => {x:number; y:number})) => {
     setPanOffsetState(offset);
   }, []);
 
+  const clearBoard = useCallback(() => {
+    setElements(defaultInitialElements);
+    setZoomState(1);
+    setPanOffsetState({ x: 0, y: 0 });
+    setSelectedElementId(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(LOCAL_STORAGE_KEY); // Also clear from LS
+    }
+  }, []);
 
   return (
     <CanvasContext.Provider
@@ -181,8 +246,10 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
         deleteElement,
         selectElement,
         bringToFront,
-        setZoom,
-        setPanOffset,
+        setZoom: setZoomCb,
+        setPanOffset: setPanOffsetCb,
+        loadFromLocalStorage,
+        clearBoard,
       }}
     >
       {children}

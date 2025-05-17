@@ -36,55 +36,54 @@ export function useDraggable({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
 
-
-  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLElement> | MouseEvent) => {
-    const target = e.target as HTMLElement;
-    
+  const processDragStart = (clientX: number, clientY: number) => {
+    const target = event?.target as HTMLElement;
     const isInteractiveElement = target.closest('button, input, textarea, select, a[href]');
     const isTargetItselfDragHandle = target.getAttribute('data-drag-handle') === 'true' || (elementRef.current && elementRef.current.contains(target) && target.getAttribute('data-drag-handle') !== 'false');
 
-
-    if (isInteractiveElement && !isTargetItselfDragHandle) {
-      return;
-    }
+    if (isInteractiveElement && !isTargetItselfDragHandle) return false;
+    if (target.getAttribute('data-drag-handle') === 'false' || target.nodeName === 'TEXTAREA' || target.nodeName === 'INPUT') return false;
     
-    // If the mousedown is on an element explicitly marked not to be a drag handle, or is input inside a text element
-    if (target.getAttribute('data-drag-handle') === 'false' || target.nodeName === 'TEXTAREA' || target.nodeName === 'INPUT') {
-      return;
-    }
-    
-    // Check if the click originated on a child button (like delete/edit)
     const onButton = target.closest('button');
     if (onButton && elementRef.current && elementRef.current.contains(onButton)) {
-        // Do not prevent default or stop propagation if it's a button click inside the element
+      // Do nothing if a button inside is clicked
     } else {
-        // For actual drag start, prevent default actions that might interfere
-        // e.preventDefault(); // Moved to handleMouseMove to allow dblclick
+      // For actual drag start, prevent default actions that might interfere during move
+      event?.preventDefault(); // Conditionally prevent if not a button
     }
-    
+
     setIsDragging(true);
-    
     setDragOrigin({
-      startClientX: e.clientX,
-      startClientY: e.clientY,
+      startClientX: clientX,
+      startClientY: clientY,
       startWorldX: position.x, 
       startWorldY: position.y,
     });
-
     onDragStart?.(position.x, position.y);
-  }, [position.x, position.y, onDragStart, elementRef]);
+    return true;
+  };
+  
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    processDragStart(e.clientX, e.clientY);
+  }, [position.x, position.y, onDragStart, elementRef, zoom, panOffset]); // Add zoom and panOffset to deps if they affect start logic
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const handleTouchStartDraggable = useCallback((e: React.TouchEvent<HTMLElement>) => {
+    if (e.touches.length === 1) {
+       // For touch, prevent default to stop page scroll if drag starts
+      if(processDragStart(e.touches[0].clientX, e.touches[0].clientY)) {
+        e.preventDefault(); 
+      }
+    }
+  }, [position.x, position.y, onDragStart, elementRef, zoom, panOffset]); // Add zoom and panOffset
+
+  const processDragMove = (clientX: number, clientY: number) => {
     if (!isDragging || !dragOrigin) return;
+    
+    event?.preventDefault(); 
+    event?.stopPropagation();
 
-    e.preventDefault(); 
-    e.stopPropagation();
-
-    const currentClientX = e.clientX;
-    const currentClientY = e.clientY;
-
-    const deltaClientX = currentClientX - dragOrigin.startClientX;
-    const deltaClientY = currentClientY - dragOrigin.startClientY;
+    const deltaClientX = clientX - dragOrigin.startClientX;
+    const deltaClientY = clientY - dragOrigin.startClientY;
 
     const deltaWorldX = deltaClientX / zoom;
     const deltaWorldY = deltaClientY / zoom;
@@ -97,7 +96,6 @@ export function useDraggable({
       const elementWidth = elementRef.current.offsetWidth; 
       const elementHeight = elementRef.current.offsetHeight;
 
-      // Calculate bounds in world coordinates
       const minWorldX = (-panOffset.x / zoom);
       const minWorldY = (-panOffset.y / zoom);
       const maxWorldX = (boundsRect.width - panOffset.x) / zoom - elementWidth;
@@ -109,39 +107,65 @@ export function useDraggable({
     
     setPosition({ x: newWorldX, y: newWorldY });
     onDrag?.(newWorldX, newWorldY);
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    processDragMove(e.clientX, e.clientY);
   }, [isDragging, dragOrigin, zoom, panOffset, bounds, elementRef, onDrag]);
 
-  const handleMouseUp = useCallback((e: MouseEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (e.touches.length === 1) {
+      processDragMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, [isDragging, dragOrigin, zoom, panOffset, bounds, elementRef, onDrag]);
+
+
+  const processDragEnd = () => {
     if (!isDragging) return;
-    
     setIsDragging(false);
     setDragOrigin(null);
     onDragEnd?.(position.x, position.y); 
+  };
+
+  const handleMouseUp = useCallback(() => {
+    processDragEnd();
   }, [isDragging, onDragEnd, position.x, position.y]);
+  
+  const handleTouchEnd = useCallback(() => {
+    processDragEnd();
+  }, [isDragging, onDragEnd, position.x, position.y]);
+
 
   useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+      document.addEventListener('touchcancel', handleTouchEnd);
       document.body.style.userSelect = 'none'; 
-      document.body.style.cursor = 'move'; // Changed to 'move'
+      document.body.style.cursor = 'move';
     } else {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchEnd);
       document.body.style.userSelect = '';
       document.body.style.cursor = ''; 
     }
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchEnd);
       document.body.style.userSelect = '';
       document.body.style.cursor = ''; 
     };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   useEffect(() => {
-    // Update position if initialX or initialY props change and not currently dragging
-    // This ensures the element's position is driven by the context unless actively dragged
     if (!isDragging) {
       setPosition({ x: initialX, y: initialY });
     }
@@ -152,6 +176,7 @@ export function useDraggable({
     position, 
     isDragging,
     handleMouseDown,
+    handleTouchStartDraggable, // Export new touch start handler for element
     setPosition, 
   };
 }
