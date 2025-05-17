@@ -32,7 +32,7 @@ const resizeHandleConfig: Array<{ id: ResizeHandleType; cursor: string; classes:
 const MIN_DIMENSION = 20; // Minimum width/height for an element
 
 export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) {
-  const { updateElement, selectElement, selectedElementId, deleteElement, zoom } = useCanvas();
+  const { updateElement, selectElement, selectedElementId, deleteElement, zoom, bringToFront } = useCanvas();
   const isSelected = selectedElementId === element.id;
   const elementRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,8 +55,16 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     initialY: element.y,
     elementRef,
     bounds: canvasBoundsRef,
+    onDragStart: () => {
+      if (selectedElementId !== element.id) {
+        selectElement(element.id);
+      } else {
+        // If already selected, still bring to front on drag start
+        bringToFront(element.id);
+      }
+    },
     onDragEnd: (x, y) => {
-      if (!isResizing) { // Only update from drag if not currently resizing
+      if (!isResizing) { 
         updateElement(element.id, { x, y });
       }
     },
@@ -71,7 +79,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
           el.classList.remove('animate-bounce-fade-in');
         }
         updateElement(element.id, { isNewlyAdded: false });
-      }, 700);
+      }, 700); 
       return () => clearTimeout(timer);
     }
   }, [element.isNewlyAdded, element.id, updateElement]);
@@ -99,7 +107,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
       setIsEditingText(true);
       setEditText(element.content);
       if (selectedElementId !== element.id) {
-        selectElement(element.id);
+        selectElement(element.id); // This will also bring to front
       }
     }
   };
@@ -125,20 +133,28 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   };
 
   const handleElementMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isEditingText) {
+    if (!isEditingText) { // Only allow drag if not editing text
       handleDragMouseDown(e);
     }
+    // Select and bring to front if not already selected
+    // This is now handled more effectively by onDragStart in useDraggable
+    // but kept here as a fallback for clicks that don't turn into drags
     if (selectedElementId !== element.id && !isEditingText) {
       selectElement(element.id);
+    } else if (isSelected && !isEditingText) {
+      // If already selected and clicked (not dragged yet), ensure it's at the front
+      bringToFront(element.id);
     }
   };
   
   const handleElementTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!isEditingText) {
-      handleTouchStartDraggable(e);
+      handleTouchStartDraggable(e); // This will trigger onDragStart which calls selectElement
     }
-    if (selectedElementId !== element.id && !isEditingText) {
+     if (selectedElementId !== element.id && !isEditingText) {
       selectElement(element.id);
+    } else if (isSelected && !isEditingText) {
+      bringToFront(element.id);
     }
   };
 
@@ -157,19 +173,23 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
       elementInitialWidth: element.width,
       elementInitialHeight: element.height,
     };
-    selectElement(element.id);
-  }, [element, selectElement]);
+    if (selectedElementId !== element.id) {
+      selectElement(element.id); // Select if not already selected
+    } else {
+      bringToFront(element.id); // Ensure it's on top if already selected
+    }
+  }, [element, selectElement, selectedElementId, bringToFront]);
 
   const handleMouseDownResize = useCallback((e: React.MouseEvent, handleId: ResizeHandleType) => {
     e.stopPropagation();
-    e.preventDefault();
+    // e.preventDefault(); // Allowing default might be needed for some complex scenarios, but usually stopPropagation is key
     startResize(e.clientX, e.clientY, handleId);
   }, [startResize]);
 
   const handleTouchStartResize = useCallback((e: React.TouchEvent, handleId: ResizeHandleType) => {
     if (e.touches.length === 1) {
       e.stopPropagation();
-      e.preventDefault();
+      // e.preventDefault(); // Similar to mouse, conditional preventDefault
       startResize(e.touches[0].clientX, e.touches[0].clientY, handleId);
     }
   }, [startResize]);
@@ -178,6 +198,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizing || !resizeStartDataRef.current) return;
+      e.preventDefault(); // Prevent text selection etc. during resize drag
 
       const {
         handleId,
@@ -195,9 +216,6 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
       const dxScreen = currentClientX - initialClientX;
       const dyScreen = currentClientY - initialClientY;
 
-      // Convert screen deltas to world deltas (considering zoom)
-      // For simplicity here, we assume rotation = 0 for delta application logic
-      // A full solution for rotated resize would involve matrix transforms of dx/dy
       const dxWorld = dxScreen / zoom;
       const dyWorld = dyScreen / zoom;
 
@@ -220,7 +238,6 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
         newHeight = elementInitialHeight + dyWorld;
       }
       
-      // Apply min dimensions and adjust position if necessary
       if (newWidth < MIN_DIMENSION) {
         if (handleId.includes('l')) {
           newX = elementInitialX + (elementInitialWidth - MIN_DIMENSION);
@@ -234,12 +251,11 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
         newHeight = MIN_DIMENSION;
       }
 
-      // For middle handles, keep the other axis position and dimension fixed
-      if (handleId === 'tm' || handleId === 'bm') { // Top-middle, Bottom-middle (vertical resize)
+      if (handleId === 'tm' || handleId === 'bm') { 
           newX = elementInitialX;
           newWidth = elementInitialWidth;
       }
-      if (handleId === 'ml' || handleId === 'mr') { // Middle-left, Middle-right (horizontal resize)
+      if (handleId === 'ml' || handleId === 'mr') { 
           newY = elementInitialY;
           newHeight = elementInitialHeight;
       }
@@ -252,6 +268,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
         setIsResizing(false);
         resizeStartDataRef.current = null;
         document.body.style.cursor = 'default';
+        // No need to call onDragEnd here, resize is not a drag operation in that sense
       }
     };
 
@@ -261,6 +278,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
       document.addEventListener('touchmove', handleGlobalMouseMove as EventListener, { passive: false });
       document.addEventListener('touchend', handleGlobalMouseUpOrTouchEnd);
       document.addEventListener('touchcancel', handleGlobalMouseUpOrTouchEnd);
+      document.body.style.userSelect = 'none';
     }
 
     return () => {
@@ -269,8 +287,9 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
       document.removeEventListener('touchmove', handleGlobalMouseMove as EventListener);
       document.removeEventListener('touchend', handleGlobalMouseUpOrTouchEnd);
       document.removeEventListener('touchcancel', handleGlobalMouseUpOrTouchEnd);
-      if (isResizing) { // Reset cursor if component unmounts while resizing
+      if (isResizing) { 
           document.body.style.cursor = 'default';
+          document.body.style.userSelect = '';
       }
     };
   }, [isResizing, updateElement, element.id, zoom]);
@@ -306,8 +325,9 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
                 color: element.textColor || 'hsl(var(--foreground))',
                 fontFamily: element.fontFamily || 'Comic Sans MS, cursive, sans-serif',
               }}
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()} // Prevent canvas deselection
+              onMouseDown={(e) => e.stopPropagation()} // Prevent drag start
+              onTouchStart={(e) => e.stopPropagation()} // Prevent drag/pan on touch
             />
           );
         }
@@ -337,6 +357,9 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     }
   };
 
+  const effectiveZIndex = isSelected && isResizing ? 1000 : (element.zIndex || 0) + (isSelected ? 500 : 0);
+
+
   return (
     <div
       ref={elementRef}
@@ -345,10 +368,10 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
         "flex items-center justify-center",
         "bg-card/70 backdrop-blur-sm rounded-md",
         isSelected
-          ? "ring-2 ring-primary ring-offset-1 ring-offset-background z-[999] shadow-xl border-primary/50"
+          ? "ring-2 ring-primary ring-offset-1 ring-offset-background shadow-xl border-primary/50" // zIndex is handled by style
           : "shadow-md hover:shadow-lg border border-transparent hover:border-primary/30",
         element.type === 'text' && !isEditingText && "hover:bg-accent/20",
-        !isResizing && "cursor-move" // Apply move cursor only when not resizing
+        !isResizing && "cursor-move"
       )}
       style={{
         left: `${position.x}px`,
@@ -356,13 +379,13 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
         width: `${element.width}px`,
         height: `${element.height}px`,
         transform: `rotate(${element.rotation}deg)`,
-        zIndex: element.zIndex,
+        zIndex: effectiveZIndex,
       }}
-      onMouseDown={isResizing ? undefined : handleElementMouseDown} // Prevent drag start if resize is initiated
-      onTouchStart={isResizing ? undefined : handleElementTouchStart} // Prevent drag start if resize is initiated
+      onMouseDown={isResizing ? undefined : handleElementMouseDown}
+      onTouchStart={isResizing ? undefined : handleElementTouchStart}
       onDoubleClick={element.type === 'text' && !isEditingText && !isResizing ? handleDoubleClick : undefined}
       data-element-id={element.id}
-      data-drag-handle="true"
+      data-drag-handle={!isEditingText && !isResizing} // Allow drag only if not editing or resizing
     >
       {renderContent()}
       {isSelected && !isEditingText && (
@@ -371,7 +394,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
           <Button
             variant="default"
             size="icon"
-            className="absolute -top-4 -right-4 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100"
+            className="absolute -top-4 -right-4 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100 z-10"
             onClick={handleDelete}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
@@ -383,7 +406,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
              <Button
               variant="default"
               size="icon"
-              className="absolute -bottom-4 -right-4 h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100"
+              className="absolute -bottom-4 -right-4 h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100 z-10"
               onClick={(e) => { e.stopPropagation(); handleDoubleClick();}}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
@@ -399,10 +422,10 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
               key={handle.id}
               className={cn(
                 "absolute w-3 h-3 bg-background border border-primary rounded-sm",
-                "opacity-0 group-hover:opacity-100", // Show on hover of parent
+                "opacity-0 group-hover:opacity-100", 
                 handle.classes
               )}
-              style={{ cursor: handle.cursor }}
+              style={{ cursor: handle.cursor, zIndex: 5 }} // z-index for handles, lower than buttons
               onMouseDown={(e) => handleMouseDownResize(e, handle.id)}
               onTouchStart={(e) => handleTouchStartResize(e, handle.id)}
             />
@@ -412,6 +435,3 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     </div>
   );
 }
-
-
-    
