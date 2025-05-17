@@ -77,7 +77,7 @@ export function SidebarTools() {
             size="icon"
             onClick={toggleSidebar}
             aria-label="Expand sidebar"
-            className="h-8 w-8" 
+            className="h-8 w-8 hover:bg-transparent" 
           >
             <Settings2 className="h-6 w-6 text-primary" />
           </Button>
@@ -140,9 +140,9 @@ export function SidebarTools() {
             </SidebarMenuButton>
           </SidebarMenuItem>
            <SidebarMenuItem className="mt-2">
-             <div className="flex items-center group-data-[collapsible=icon]:justify-center"> {/* Ensure wrapper div centers content in icon mode */}
-                <ThemeToggle className="[&_button]:group-data-[collapsible=icon]:w-8 [&_button]:group-data-[collapsible=icon]:h-8" /> {/* Resize internal button in icon mode */}
-                <span className="ml-2 text-sm group-data-[collapsible=icon]:hidden">Toggle Theme</span>
+             <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
+                <ThemeToggle className="[&_button]:group-data-[collapsible=icon]:w-8 [&_button]:group-data-[collapsible=icon]:h-8" />
+                <span className="text-sm group-data-[collapsible=icon]:hidden">Toggle Theme</span>
              </div>
           </SidebarMenuItem>
         </SidebarMenu>
