@@ -40,16 +40,27 @@ export function useDraggable({
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLElement> | MouseEvent) => {
     const target = e.target as HTMLElement;
     
-    // Allow mousedown for interactive elements (buttons, inputs etc. inside the draggable)
-    // unless the mousedown target itself is explicitly marked as a drag handle.
     const isInteractiveElement = target.closest('button, input, textarea, select, a[href]');
-    const isTargetItselfDragHandle = target.getAttribute('data-drag-handle') === 'true';
+    const isTargetItselfDragHandle = target.getAttribute('data-drag-handle') === 'true' || (elementRef.current && elementRef.current.contains(target) && target.getAttribute('data-drag-handle') !== 'false');
+
 
     if (isInteractiveElement && !isTargetItselfDragHandle) {
       return;
     }
-    // Do not call e.preventDefault() universally here, to allow double-clicks and focus.
-    // It will be called in handleMouseMove if a drag actually starts.
+    
+    // If the mousedown is on an element explicitly marked not to be a drag handle, or is input inside a text element
+    if (target.getAttribute('data-drag-handle') === 'false' || target.nodeName === 'TEXTAREA' || target.nodeName === 'INPUT') {
+      return;
+    }
+    
+    // Check if the click originated on a child button (like delete/edit)
+    const onButton = target.closest('button');
+    if (onButton && elementRef.current && elementRef.current.contains(onButton)) {
+        // Do not prevent default or stop propagation if it's a button click inside the element
+    } else {
+        // For actual drag start, prevent default actions that might interfere
+        // e.preventDefault(); // Moved to handleMouseMove to allow dblclick
+    }
     
     setIsDragging(true);
     
@@ -61,12 +72,12 @@ export function useDraggable({
     });
 
     onDragStart?.(position.x, position.y);
-  }, [position.x, position.y, onDragStart]);
+  }, [position.x, position.y, onDragStart, elementRef]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !dragOrigin) return;
 
-    e.preventDefault(); // Prevent text selection etc. *during* drag
+    e.preventDefault(); 
     e.stopPropagation();
 
     const currentClientX = e.clientX;
@@ -86,6 +97,7 @@ export function useDraggable({
       const elementWidth = elementRef.current.offsetWidth; 
       const elementHeight = elementRef.current.offsetHeight;
 
+      // Calculate bounds in world coordinates
       const minWorldX = (-panOffset.x / zoom);
       const minWorldY = (-panOffset.y / zoom);
       const maxWorldX = (boundsRect.width - panOffset.x) / zoom - elementWidth;
@@ -112,22 +124,24 @@ export function useDraggable({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = 'none'; 
-      document.body.style.cursor = 'grabbing'; // Set body cursor to grabbing
+      document.body.style.cursor = 'move'; // Changed to 'move'
     } else {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = '';
-      document.body.style.cursor = ''; // Revert body cursor
+      document.body.style.cursor = ''; 
     }
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = '';
-      document.body.style.cursor = ''; // Ensure cleanup on unmount
+      document.body.style.cursor = ''; 
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
+    // Update position if initialX or initialY props change and not currently dragging
+    // This ensures the element's position is driven by the context unless actively dragged
     if (!isDragging) {
       setPosition({ x: initialX, y: initialY });
     }

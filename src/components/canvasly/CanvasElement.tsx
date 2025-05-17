@@ -37,6 +37,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
   useEffect(() => {
     if (isEditingText && textAreaRef.current) {
       textAreaRef.current.focus();
+      textAreaRef.current.select(); // Select text for easier editing
     }
   }, [isEditingText]);
 
@@ -109,7 +110,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
               className="w-full h-full p-1 bg-background border-dashed border-primary/50 resize-none focus:ring-1 focus:ring-primary text-foreground"
               style={{ fontSize: `${element.fontSize || 16}px`, color: element.textColor || 'hsl(var(--foreground))' }}
               onClick={(e) => e.stopPropagation()} 
-              onMouseDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()} // Prevent drag while editing text
             />
           );
         }
@@ -139,9 +140,9 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
     <div
       ref={elementRef}
       className={cn(
-        "absolute cursor-grab select-none group",
+        "absolute cursor-move select-none group", // Changed cursor-grab to cursor-move
         "flex items-center justify-center",
-        "transition-all duration-200 ease-in-out", // Added for smooth transitions
+        // "transition-all duration-200 ease-in-out", // Removed for instant style changes
         "bg-card/70 backdrop-blur-sm rounded-md",
         isSelected 
           ? "ring-2 ring-primary ring-offset-1 ring-offset-background z-[999] shadow-xl border-primary/50" 
@@ -174,7 +175,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
           <Button
             variant="default"
             size="icon"
-            className="absolute -top-4 -right-4 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute -top-4 -right-4 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100" // Removed transition-opacity as parent transition is gone
             onClick={handleDelete}
             onMouseDown={(e) => e.stopPropagation()} 
             aria-label="Delete element"
@@ -185,7 +186,7 @@ export function CanvasElement({ element, canvasBoundsRef }: CanvasElementProps) 
              <Button
               variant="default"
               size="icon"
-              className="absolute -bottom-4 -right-4 h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute -bottom-4 -right-4 h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100" // Removed transition-opacity
               onClick={(e) => { e.stopPropagation(); handleDoubleClick();}}
               onMouseDown={(e) => e.stopPropagation()}
               aria-label="Edit text"
