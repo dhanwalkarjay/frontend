@@ -186,7 +186,9 @@ export function SidebarTools() {
           ) : (
             <div className="flex items-center gap-2">
               <Settings2 className="h-6 w-6 text-primary" />
-              <h2 className="font-semibold text-lg">Canvasly Tools</h2>
+              <h2 className="font-semibold text-lg" style={{ fontFamily: 'Comic Sans MS, cursive, sans-serif' }}>
+                <span className="text-primary">Can</span><span style={{ color: 'hsl(var(--secondary))' }}>vasly</span>
+              </h2>
             </div>
           )}
           { (desktopExpanded || isMobile) && <SidebarTrigger /> }
