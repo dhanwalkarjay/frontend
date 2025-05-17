@@ -56,7 +56,7 @@ export function SidebarTools() {
            <Settings2 className="h-6 w-6 text-primary" />
            <h2 className="font-semibold text-lg group-data-[collapsible=icon]:hidden">Canvasly Tools</h2>
         </div>
-        <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
+        <SidebarTrigger /> {/* Removed className="group-data-[collapsible=icon]:hidden" */}
       </SidebarHeader>
       <SidebarSeparator />
       <SidebarContent className="p-2">
@@ -103,8 +103,8 @@ export function SidebarTools() {
             </SidebarMenuButton>
           </SidebarMenuItem>
            <SidebarMenuItem className="mt-2">
-             <div className="flex justify-center items-center group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:pl-0.5">
-                <ThemeToggle />
+             <div className="flex items-center group-data-[collapsible=icon]:justify-center"> {/* Ensure wrapper div centers content in icon mode */}
+                <ThemeToggle className="[&_button]:group-data-[collapsible=icon]:w-8 [&_button]:group-data-[collapsible=icon]:h-8" /> {/* Resize internal button in icon mode */}
                 <span className="ml-2 text-sm group-data-[collapsible=icon]:hidden">Toggle Theme</span>
              </div>
           </SidebarMenuItem>
