@@ -9,19 +9,29 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
+  SidebarTrigger, // Standard trigger (PanelLeft)
   SidebarSeparator,
+  useSidebar, // To get sidebar state
 } from "@/components/ui/sidebar"
 import { ThemeToggle } from "./ThemeToggle"
 import { useCanvas } from "@/contexts/CanvasContext"
 import { ImageIcon, SmileIcon, TypeIcon, Trash2Icon, DownloadIcon, Settings2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { CanvasElementData } from "@/types/canvas"
-
+import { Button } from "@/components/ui/button" // For the Settings2 trigger button
+import { cn } from "@/lib/utils"
 
 export function SidebarTools() {
   const { addElement, deleteElement, selectedElementId } = useCanvas();
   const { toast } = useToast();
+  // `open` is true if desktop sidebar is expanded, false if collapsed (icon mode)
+  // `isMobile` is true if on mobile viewport
+  // `toggleSidebar` toggles desktop state or mobile sheet
+  const { open, toggleSidebar, isMobile } = useSidebar();
+
+  const desktopExpanded = !isMobile && open;
+  const desktopCollapsed = !isMobile && !open;
+  // Mobile state is handled by `isMobile` flag. `open` is relevant for desktop.
 
   const handleAddElement = (type: CanvasElementData['type']) => {
     let partialData: Partial<CanvasElementData> = {};
@@ -51,12 +61,39 @@ export function SidebarTools() {
 
   return (
     <Sidebar collapsible="icon" className="border-r shadow-md">
-      <SidebarHeader className="p-4 items-center flex-row justify-between">
-        <div className="flex items-center gap-2">
-           <Settings2 className="h-6 w-6 text-primary" />
-           <h2 className="font-semibold text-lg group-data-[collapsible=icon]:hidden">Canvasly Tools</h2>
-        </div>
-        <SidebarTrigger /> {/* Removed className="group-data-[collapsible=icon]:hidden" */}
+      <SidebarHeader 
+        className={cn(
+          "p-4 items-center flex-row",
+          // If desktop & expanded OR on mobile: justify-between (for text and PanelLeft trigger)
+          // If desktop & collapsed: justify-center (for Settings2 trigger)
+          desktopExpanded || isMobile ? "justify-between" : "justify-center" 
+        )}
+      >
+        {/* Left part: Settings2 icon and optional text, or Settings2 as button */}
+        {desktopCollapsed ? (
+          // Desktop Collapsed: Settings2 icon is the expand trigger
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            aria-label="Expand sidebar"
+            className="h-8 w-8" 
+          >
+            <Settings2 className="h-6 w-6 text-primary" />
+          </Button>
+        ) : (
+          // Desktop Expanded OR Mobile: Settings2 icon + "Canvasly Tools" text
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-6 w-6 text-primary" />
+            {/* Text is always shown here because this block is for desktop-expanded or mobile */}
+            <h2 className="font-semibold text-lg">Canvasly Tools</h2>
+          </div>
+        )}
+
+        {/* Right part: Original SidebarTrigger (PanelLeft icon) */}
+        {/* Show if (desktop AND expanded to allow collapse) OR (on mobile, to control the sheet) */}
+        { (desktopExpanded || isMobile) && <SidebarTrigger /> }
+        
       </SidebarHeader>
       <SidebarSeparator />
       <SidebarContent className="p-2">
