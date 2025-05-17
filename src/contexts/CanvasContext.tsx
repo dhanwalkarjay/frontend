@@ -9,11 +9,15 @@ const generateRobustId = () => Date.now().toString(36) + Math.random().toString(
 interface CanvasContextType {
   elements: CanvasElementData[];
   selectedElementId: string | null;
-  addElement: (type: CanvasElementData['type'], partialData?: Partial<CanvasElementData>) => string; // Returns new element ID
+  zoom: number;
+  panOffset: { x: number; y: number };
+  addElement: (type: CanvasElementData['type'], partialData?: Partial<CanvasElementData>) => string;
   updateElement: (id: string, updates: Partial<CanvasElementData>) => void;
   deleteElement: (id: string) => void;
   selectElement: (id: string | null) => void;
   bringToFront: (id: string) => void;
+  setZoom: (zoomLevel: number | ((prevZoom: number) => number)) => void;
+  setPanOffset: (offset: { x: number; y: number } | ((prevOffset: { x: number; y: number }) => { x: number; y: number })) => void;
 }
 
 const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
@@ -34,7 +38,7 @@ const initialElements: CanvasElementData[] = [
   { 
     id: generateRobustId(), type: 'text', content: 'Welcome to Canvasly!', 
     x: 50, y: 50, width: 250, height: 50, rotation: 0, zIndex: 1, 
-    fontSize: 24, textColor: 'hsl(var(--foreground))' // Theme-aware
+    fontSize: 24, textColor: 'hsl(var(--foreground))'
   },
   { 
     id: generateRobustId(), type: 'image', content: 'https://placehold.co/300x200.png', 
@@ -46,6 +50,8 @@ const initialElements: CanvasElementData[] = [
 export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   const [elements, setElements] = useState<CanvasElementData[]>(initialElements);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [zoom, setZoomState] = useState<number>(1);
+  const [panOffset, setPanOffsetState] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const getHighestZIndex = useCallback(() => {
     return elements.reduce((maxZ, el) => Math.max(maxZ, el.zIndex), 0);
@@ -54,11 +60,20 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   const addElement = useCallback((type: CanvasElementData['type'], partialData?: Partial<CanvasElementData>) => {
     const newZIndex = getHighestZIndex() + 1;
     const newId = generateRobustId();
+    
+    // Adjust initial position based on current pan and zoom to appear in viewport center (approx)
+    const viewportCenterX = (typeof window !== "undefined" ? window.innerWidth / 2 : 400); // Approx fallback
+    const viewportCenterY = (typeof window !== "undefined" ? window.innerHeight / 2 : 300); // Approx fallback
+    
+    const initialX = (viewportCenterX - panOffset.x - (partialData?.width || (type === 'image' ? 200 : 150))/2 ) / zoom;
+    const initialY = (viewportCenterY - panOffset.y - (partialData?.height || (type === 'image' ? 150 : 40))/2) / zoom;
+
+
     const newElementBase = {
       id: newId,
       type,
-      x: 50 + Math.random() * 50, // Default position with some variance
-      y: 50 + Math.random() * 50,
+      x: initialX,
+      y: initialY,
       rotation: 0,
       zIndex: newZIndex,
     };
@@ -73,7 +88,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
           width: 150,
           height: 40,
           fontSize: 20,
-          textColor: 'hsl(var(--foreground))', // Theme-aware
+          textColor: 'hsl(var(--foreground))',
           ...partialData,
         };
         break;
@@ -93,7 +108,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
           content: '✨', 
           width: 60, 
           height: 60,
-          stickerSize: 48, // This will be used for font-size of emoji
+          stickerSize: 48,
           ...partialData,
         };
         break;
@@ -103,7 +118,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
     setElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id);
     return newId;
-  }, [getHighestZIndex]);
+  }, [getHighestZIndex, panOffset, zoom]);
 
   const updateElement = useCallback((id: string, updates: Partial<CanvasElementData>) => {
     setElements(prev => prev.map(el => (el.id === id ? { ...el, ...updates } : el)));
@@ -128,8 +143,12 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
           if (el.id === id) {
             return { ...el, zIndex: highestZIndex + 1 };
           }
+          // Lower zIndex of other elements if they are above the new highest to avoid gaps, optional
+          // else if (el.zIndex > currentElement.zIndex && el.zIndex <= highestZIndex) {
+          //  return { ...el, zIndex: el.zIndex -1 };
+          // }
           return el;
-        })
+        }).sort((a,b) => a.zIndex - b.zIndex) // Re-sort might be good if complex z-index logic is added
       );
     }
   }, [elements, getHighestZIndex]);
@@ -141,17 +160,29 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
     }
   }, [bringToFront]);
 
+  const setZoom = useCallback((zoomLevel: number | ((prevZoom: number) => number)) => {
+    setZoomState(zoomLevel);
+  }, []);
+
+  const setPanOffset = useCallback((offset: { x: number; y: number } | ((prevOffset: {x:number; y:number}) => {x:number; y:number})) => {
+    setPanOffsetState(offset);
+  }, []);
+
 
   return (
     <CanvasContext.Provider
       value={{
         elements,
         selectedElementId,
+        zoom,
+        panOffset,
         addElement,
         updateElement,
         deleteElement,
         selectElement,
         bringToFront,
+        setZoom,
+        setPanOffset,
       }}
     >
       {children}
