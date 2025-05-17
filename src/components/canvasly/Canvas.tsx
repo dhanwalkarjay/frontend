@@ -158,16 +158,18 @@ export function Canvas() {
       id="canvas-viewport-for-export" 
       ref={canvasViewportRef}
       className={cn(
-        "relative w-full h-full overflow-hidden bg-gradient-to-br from-background to-muted/20 shadow-inner select-none",
+        "relative w-full h-full overflow-hidden bg-background shadow-inner select-none", // Removed gradient, ensure bg-background
         "p-0"
       )}
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
       style={{
+        backgroundImage: `radial-gradient(hsl(var(--border)) 0.5px, transparent 0.5px)`, // Dot pattern
+        backgroundSize: '15px 15px', // Dot spacing
         minHeight: '100%',
         height: '100%'
       }}
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
     >
       <div
         id="canvas-world-ref"
@@ -198,3 +200,4 @@ export function Canvas() {
     </div>
   );
 }
+
