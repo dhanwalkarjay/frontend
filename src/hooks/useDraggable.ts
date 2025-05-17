@@ -28,29 +28,37 @@ export function useDraggable({
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLElement> | MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('input, textarea, button:not([data-drag-handle])')) {
-      if (!target.closest('[data-drag-handle="true"]')) {
-        return;
-      }
+
+    // If the click target is an interactive element (input, button, etc.)
+    // AND that interactive element itself does NOT have the 'data-drag-handle' attribute,
+    // THEN we should prevent dragging by returning early.
+    // This allows an element <button data-drag-handle="true">Drag Me</button> to be draggable,
+    // but a simple <button> (like Delete/Edit) inside a draggable area to be clickable without dragging.
+    if (
+      target.matches('input, textarea, button, select, a[href]') &&
+      !target.hasAttribute('data-drag-handle')
+    ) {
+      // Do not start drag, let the interactive element handle the event.
+      // e.stopPropagation() might still be useful here if we want to prevent
+      // the CanvasElement's own onClick from firing for these specific interactions.
+      // For now, let's assume the default behavior is fine or handled by the button's own onClick.
+      return;
     }
     
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); // Prevent default actions like text selection during drag
+    e.stopPropagation(); // Stop event from bubbling further, especially to parent handlers
 
     setIsDragging(true);
 
     const elementRect = elementRef.current?.getBoundingClientRect();
     
     if (elementRect) {
-        // Calculate offset from element's top-left (0,0 of element) to mouse click position
-        // This is the point within the element that was clicked.
         setOffsetFromElementOrigin({
             x: e.clientX - elementRect.left,
             y: e.clientY - elementRect.top,
         });
     } else {
-        // Fallback if rects are not available
-        setOffsetFromElementOrigin({ x: 0, y: 0}); // Clicked at top-left
+        setOffsetFromElementOrigin({ x: 0, y: 0}); 
     }
 
     onDragStart?.(position.x, position.y);
@@ -61,26 +69,23 @@ export function useDraggable({
     e.preventDefault();
     e.stopPropagation();
 
-    let newX = e.clientX; // Absolute screen X
-    let newY = e.clientY; // Absolute screen Y
+    let newX = e.clientX; 
+    let newY = e.clientY; 
 
     if (bounds?.current && elementRef.current) {
       const boundsRect = bounds.current.getBoundingClientRect();
       const elementWidth = elementRef.current.offsetWidth;
       const elementHeight = elementRef.current.offsetHeight;
       
-      // Calculate desired top-left of element relative to bounds parent
       newX = (e.clientX - boundsRect.left) - offsetFromElementOrigin.x;
       newY = (e.clientY - boundsRect.top) - offsetFromElementOrigin.y;
 
-      // Boundary checks
       newX = Math.max(0, newX);
       newY = Math.max(0, newY);
       newX = Math.min(boundsRect.width - elementWidth, newX);
       newY = Math.min(boundsRect.height - elementHeight, newY);
     } else {
-      // No bounds, simple relative drag (less accurate)
-      newX = e.clientX - offsetFromElementOrigin.x; // This offset needs to be relative to page
+      newX = e.clientX - offsetFromElementOrigin.x; 
       newY = e.clientY - offsetFromElementOrigin.y;
     }
     
@@ -90,12 +95,11 @@ export function useDraggable({
 
   const handleMouseUp = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
-    e.preventDefault();
-    e.stopPropagation();
+    // No e.preventDefault() here typically, as mouseup doesn't have many default actions to prevent for drag.
+    // e.stopPropagation() can be useful if there are global mouseup listeners to avoid.
+    e.stopPropagation(); 
     
     setIsDragging(false);
-    // Final position update ensures it's within bounds, if any
-    // The position state is already constrained by handleMouseMove
     onDragEnd?.(position.x, position.y);
   }, [isDragging, onDragEnd, position.x, position.y]);
 
@@ -114,6 +118,7 @@ export function useDraggable({
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
+    // Update internal position if initialX/initialY props change and not currently dragging
     if (!isDragging) {
       setPosition({ x: initialX, y: initialY });
     }
