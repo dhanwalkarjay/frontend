@@ -1,7 +1,6 @@
+"use client";
 
-"use client"
-
-import React, { useRef, useState, ChangeEvent } from 'react';
+import React, { useRef, useState, ChangeEvent } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,45 +12,76 @@ import {
   SidebarTrigger,
   SidebarSeparator,
   useSidebar,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
-import { ThemeToggle } from "./ThemeToggle"
-import { useCanvas } from "@/contexts/CanvasContext"
-import { ImageIcon, SmileIcon, TypeIcon, Trash2Icon, DownloadIcon, Settings2, RefreshCwIcon, SaveIcon, UploadCloudIcon, PanelLeft } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import type { CanvasElementData } from "@/types/canvas"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import html2canvas from 'html2canvas';
+import { ThemeToggle } from "./ThemeToggle";
+import { useCanvas } from "@/contexts/CanvasContext";
+import {
+  ImageIcon,
+  SmileIcon,
+  TypeIcon,
+  Trash2Icon,
+  DownloadIcon,
+  Settings2,
+  RefreshCwIcon,
+  SaveIcon,
+  UploadCloudIcon,
+  PanelLeft,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import type { CanvasElementData } from "@/types/canvas";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import html2canvas from "html2canvas";
+import { LineShadowText } from "../magicui/line-shadow-text";
 
-const STICKERS = ['🎨', '💡', '🚀', '🌟', '🧩', '🎉', '✨', '😀', '😍', '👍', '💯', '🔥', '❤️', '✅', '⚠️'];
-const NEW_DEFAULT_FONT = 'Comic Sans MS, cursive, sans-serif';
+const STICKERS = [
+  "✈️",
+  "🗺️",
+  "🌍",
+  "📍",
+  "⛰️",
+  "🏕️",
+  "🏖️",
+  "☀️",
+  "🚗",
+  "🎒",
+  "📸",
+  "🛂",
+  "🎟️",
+  "🌟",
+  "❤️",
+];
+const NEW_DEFAULT_FONT = "Comic Sans MS, cursive, sans-serif";
 const FONT_OPTIONS = [
-  { value: NEW_DEFAULT_FONT, label: 'Comic Sans MS' },
-  { value: 'Arial, sans-serif', label: 'Arial' },
-  { value: 'Verdana, sans-serif', label: 'Verdana' },
-  { value: 'Georgia, serif', label: 'Georgia' },
-  { value: 'Times New Roman, Times, serif', label: 'Times New Roman' },
-  { value: 'Courier New, Courier, monospace', label: 'Courier New' },
-  { value: 'Impact, Charcoal, sans-serif', label: 'Impact' },
+  { value: NEW_DEFAULT_FONT, label: "Comic Sans MS" },
+  { value: "Arial, sans-serif", label: "Arial" },
+  { value: "Verdana, sans-serif", label: "Verdana" },
+  { value: "Georgia, serif", label: "Georgia" },
+  { value: "Times New Roman, Times, serif", label: "Times New Roman" },
+  { value: "Courier New, Courier, monospace", label: "Courier New" },
+  { value: "Impact, Charcoal, sans-serif", label: "Impact" },
 ];
 
+interface SidebarToolsProps {
+  onExportSuccess?: () => void;
+}
 
-export function SidebarTools() {
+export function SidebarTools({ onExportSuccess }: SidebarToolsProps) {
   const {
     elements,
     addElement,
@@ -59,7 +89,7 @@ export function SidebarTools() {
     selectedElementId,
     updateElement,
     loadFromLocalStorage,
-    clearBoard
+    clearBoard,
   } = useCanvas();
   const { toast } = useToast();
   const { open, toggleSidebar, isMobile, state } = useSidebar();
@@ -67,9 +97,9 @@ export function SidebarTools() {
   const [isStickerPopoverOpen, setIsStickerPopoverOpen] = useState(false);
 
   const desktopExpanded = !isMobile && open;
-  const desktopCollapsed = !isMobile && !open && state === 'collapsed'; 
+  const desktopCollapsed = !isMobile && !open && state === "collapsed";
 
-  const selectedElement = elements.find(el => el.id === selectedElementId);
+  const selectedElement = elements.find((el) => el.id === selectedElementId);
 
   const handleAddImageElement = () => {
     if (fileInputRef.current) {
@@ -82,16 +112,19 @@ export function SidebarTools() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        addElement('image', { content: reader.result as string, 'data-ai-hint': file.name });
+        addElement("image", {
+          content: reader.result as string,
+          "data-ai-hint": file.name.split(".")[0],
+        });
         toast({ title: "Image added", description: file.name });
       };
       reader.readAsDataURL(file);
-      if (fileInputRef.current) fileInputRef.current.value = ""; 
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleAddSticker = (sticker: string) => {
-    addElement('sticker', { content: sticker });
+    addElement("sticker", { content: sticker });
     setIsStickerPopoverOpen(false);
     toast({ title: "Sticker added", description: sticker });
   };
@@ -104,37 +137,48 @@ export function SidebarTools() {
   };
 
   const handleExport = async () => {
-    toast({ title: "Preparing download..."});
-    const canvasToExport = document.getElementById('canvas-viewport-for-export'); 
+    toast({ title: "Preparing download..." });
+    const canvasToExport = document.getElementById(
+      "canvas-viewport-for-export"
+    );
     if (canvasToExport) {
       try {
-        const canvas = await html2canvas(canvasToExport, { 
+        const canvas = await html2canvas(canvasToExport, {
           useCORS: true,
-          backgroundColor: null, // Use the actual background of the div
-          scale: 2, // Increase scale for better resolution
+          backgroundColor: null,
+          scale: 2,
           logging: false,
         });
-        const image = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
         link.href = image;
-        link.download = 'canvasly-board.png';
+        link.download = "tripboard.png";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast({ title: "Download started!", description: "canvasly-board.png" });
+        toast({ title: "Download started!", description: "tripboard.png" });
+        onExportSuccess?.(); // Trigger confetti
       } catch (error) {
         console.error("Error exporting canvas: ", error);
-        toast({ variant: "destructive", title: "Export failed", description: "Could not generate image." });
+        toast({
+          variant: "destructive",
+          title: "Export failed",
+          description: "Could not generate image.",
+        });
       }
     } else {
-      toast({ variant: "destructive", title: "Export failed", description: "Canvas export target element not found." });
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: "Canvas export target element not found.",
+      });
     }
   };
 
   const handleClearBoard = () => {
     clearBoard();
-    toast({ title: "Board Cleared", description: "Loaded default elements."});
-  }
+    toast({ title: "Board Cleared", description: "Loaded default elements." });
+  };
 
   const handleUpdateTextColor = (color: string) => {
     if (selectedElementId) {
@@ -147,7 +191,7 @@ export function SidebarTools() {
       updateElement(selectedElementId, { fontFamily: font });
     }
   };
-   const handleUpdateFontSize = (size: string) => {
+  const handleUpdateFontSize = (size: string) => {
     if (selectedElementId) {
       const newSize = parseInt(size, 10);
       if (!isNaN(newSize) && newSize > 0) {
@@ -155,7 +199,6 @@ export function SidebarTools() {
       }
     }
   };
-
 
   return (
     <>
@@ -170,7 +213,7 @@ export function SidebarTools() {
         <SidebarHeader
           className={cn(
             "p-4 items-center flex-row",
-            (desktopExpanded || isMobile) ? "justify-between" : "justify-center"
+            desktopExpanded || isMobile ? "justify-between" : "justify-center"
           )}
         >
           {desktopCollapsed && !isMobile ? (
@@ -179,46 +222,71 @@ export function SidebarTools() {
               size="icon"
               onClick={toggleSidebar}
               aria-label="Expand sidebar"
-              className="h-8 w-8 hover:bg-transparent"
+              className="h-8 w-8 hover:bg-transparent cursor-default"
             >
               <Settings2 className="h-6 w-6 text-primary" />
             </Button>
           ) : (
             <div className="flex items-center gap-2">
               <Settings2 className="h-6 w-6 text-primary" />
-              <h2 className="font-semibold text-lg" style={{ fontFamily: 'Comic Sans MS, cursive, sans-serif' }}>
-                <span className="text-primary">Can</span><span className="text-secondary">vasly</span>
+              <h2
+                className="font-semibold text-3xl"
+                style={{ fontFamily: "Comic Sans MS, cursive, sans-serif" }}
+              >
+                <span className="text-primary">Trip</span>
+                <LineShadowText>Board</LineShadowText>
               </h2>
             </div>
           )}
-          { (desktopExpanded || isMobile) && <SidebarTrigger /> }
-          { isMobile && !open && <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden"><PanelLeft /></Button> }
+          {(desktopExpanded || isMobile) && (
+            <SidebarTrigger className="cursor-default" />
+          )}
+          {isMobile && !open && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="md:hidden cursor-default"
+            >
+              <PanelLeft />
+            </Button>
+          )}
         </SidebarHeader>
         <SidebarSeparator />
         <SidebarContent className="p-2">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleAddImageElement} tooltip="Add Image from Device">
+              <SidebarMenuButton
+                onClick={handleAddImageElement}
+                tooltip="Add Image from Device"
+              >
                 <UploadCloudIcon />
                 <span>Add Image</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-             <Popover open={isStickerPopoverOpen} onOpenChange={setIsStickerPopoverOpen}>
+              <Popover
+                open={isStickerPopoverOpen}
+                onOpenChange={setIsStickerPopoverOpen}
+              >
                 <PopoverTrigger asChild>
-                   <SidebarMenuButton tooltip="Add Sticker">
+                  <SidebarMenuButton tooltip="Add Sticker">
                     <SmileIcon />
                     <span>Add Sticker</span>
                   </SidebarMenuButton>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-2" side="right" align="start">
+                <PopoverContent
+                  className="w-auto p-2"
+                  side="right"
+                  align="start"
+                >
                   <div className="grid grid-cols-5 gap-1">
-                    {STICKERS.map(sticker => (
+                    {STICKERS.map((sticker) => (
                       <Button
                         key={sticker}
                         variant="ghost"
                         size="icon"
-                        className="text-2xl w-10 h-10"
+                        className="text-2xl w-10 h-10 cursor-default"
                         onClick={() => handleAddSticker(sticker)}
                       >
                         {sticker}
@@ -229,61 +297,84 @@ export function SidebarTools() {
               </Popover>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => addElement('text')} tooltip="Add Text">
+              <SidebarMenuButton
+                onClick={() => addElement("text")}
+                tooltip="Add Text"
+              >
                 <TypeIcon />
                 <span>Add Text</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
 
-          {selectedElement && selectedElement.type === 'text' && (
+          {selectedElement && selectedElement.type === "text" && (
             <>
               <SidebarSeparator />
-              <div className={cn("p-2 space-y-3", desktopCollapsed && "hidden")}>
-                <h3 className="text-sm font-medium text-muted-foreground px-1">Text Properties</h3>
+              <div
+                className={cn("p-2 space-y-3", desktopCollapsed && "hidden")}
+              >
+                <h3 className="text-sm font-medium text-muted-foreground px-1">
+                  Text Properties
+                </h3>
                 <div className="space-y-2">
-                  <Label htmlFor="text-color-picker" className="text-xs px-1">Color</Label>
+                  <Label htmlFor="text-color-picker" className="text-xs px-1">
+                    Color
+                  </Label>
                   <Input
                     id="text-color-picker"
                     type="color"
-                    value={selectedElement.textColor?.startsWith('hsl') ? '#3D4C5F' : selectedElement.textColor || '#3D4C5F'} 
+                    value={
+                      selectedElement.textColor?.startsWith("hsl")
+                        ? "#20577A"
+                        : selectedElement.textColor || "#20577A"
+                    }
                     onChange={(e) => handleUpdateTextColor(e.target.value)}
-                    className="h-8 w-full"
+                    className="h-8 w-full cursor-default"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="font-family-select" className="text-xs px-1">Font</Label>
+                  <Label htmlFor="font-family-select" className="text-xs px-1">
+                    Font
+                  </Label>
                   <Select
                     value={selectedElement.fontFamily || NEW_DEFAULT_FONT}
                     onValueChange={handleUpdateFontFamily}
                   >
-                    <SelectTrigger id="font-family-select" className="h-8 text-xs">
+                    <SelectTrigger
+                      id="font-family-select"
+                      className="h-8 text-xs cursor-default"
+                    >
                       <SelectValue placeholder="Select font" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {FONT_OPTIONS.map(font => (
-                        <SelectItem key={font.value} value={font.value} className="text-xs">
+                    <SelectContent className="cursor-default">
+                      {FONT_OPTIONS.map((font) => (
+                        <SelectItem
+                          key={font.value}
+                          value={font.value}
+                          className="text-xs cursor-default"
+                        >
                           {font.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                 <div className="space-y-1">
-                  <Label htmlFor="font-size-input" className="text-xs px-1">Size (px)</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="font-size-input" className="text-xs px-1">
+                    Size (px)
+                  </Label>
                   <Input
                     id="font-size-input"
                     type="number"
                     min="1"
                     value={selectedElement.fontSize || 16}
                     onChange={(e) => handleUpdateFontSize(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-8 text-xs cursor-default"
                   />
                 </div>
               </div>
             </>
           )}
-
         </SidebarContent>
         <SidebarSeparator />
         <SidebarFooter className="p-2 mt-auto">
@@ -292,36 +383,62 @@ export function SidebarTools() {
               <SidebarMenuButton
                 onClick={handleDeleteSelected}
                 disabled={!selectedElementId}
-                variant={selectedElementId ? "destructive" : "default"}
+                variant={selectedElementId ? "outline" : "default"}
                 tooltip="Delete Selected"
-                className={!selectedElementId ? "opacity-50 cursor-not-allowed" : ""}
+                className={cn(
+                  !selectedElementId ? "opacity-50" : "",
+                  !selectedElementId && "cursor-not-allowed",
+                  "cursor-default"
+                )}
               >
                 <Trash2Icon />
                 <span>Delete Selected</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleClearBoard} tooltip="Clear Board" variant="outline">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleClearBoard}
+                tooltip="Clear Board"
+                variant="outline"
+              >
                 <RefreshCwIcon />
                 <span>Clear Board</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={loadFromLocalStorage} tooltip="Reload from Storage" variant="outline">
+              <SidebarMenuButton
+                onClick={loadFromLocalStorage}
+                tooltip="Reload from Storage"
+                variant="outline"
+              >
                 <SaveIcon />
                 <span>Reload Board</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleExport} tooltip="Download as PNG">
+              <SidebarMenuButton
+                onClick={handleExport}
+                tooltip="Download as PNG"
+              >
                 <DownloadIcon />
                 <span>Download</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem className="mt-2">
-              <div className={cn("flex items-center gap-2", desktopCollapsed ? "justify-center" : "justify-start")}>
-                <ThemeToggle className={cn(desktopCollapsed && "[&_button]:w-8 [&_button]:h-8")} />
-                <span className={cn("text-sm", desktopCollapsed && "hidden")}>Toggle Theme</span>
+              <div
+                className={cn(
+                  "flex items-center gap-2",
+                  desktopCollapsed ? "justify-center" : "justify-start"
+                )}
+              >
+                <ThemeToggle
+                  className={cn(
+                    desktopCollapsed && "[&_button]:w-8 [&_button]:h-8"
+                  )}
+                />
+                <span className={cn("text-sm", desktopCollapsed && "hidden")}>
+                  Toggle Theme
+                </span>
               </div>
             </SidebarMenuItem>
           </SidebarMenu>

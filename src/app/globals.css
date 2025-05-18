@@ -1,86 +1,90 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* Removed explicit body font-family to allow Geist Sans from layout.tsx to take effect */
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* Very Light Sky Blue */
-    --foreground: 220 25% 25%; /* Dark Slate Blue */
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 220 25% 25%; /* Dark Slate Blue */
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 220 25% 25%; /* Dark Slate Blue */
-    --primary: 190 70% 55%; /* Bright Cyan/Teal */
+    /* Light Theme: Earthy, Adventurous, Warm */
+    --background: 45 30% 96%; /* Pale Yellow-Gray */
+    --foreground: 30 10% 25%; /* Dark Warm Gray */
+    --card: 45 30% 99%; /* Lighter Pale Yellow-Gray */
+    --card-foreground: 30 10% 25%; /* Dark Warm Gray */
+    --popover: 45 30% 99%; /* Lighter Pale Yellow-Gray */
+    --popover-foreground: 30 10% 25%; /* Dark Warm Gray */
+    --primary: 205 70% 50%; /* Sky Blue */
     --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 30 100% 70%; /* Soft Orange/Peach */
-    --secondary-foreground: 220 25% 25%; /* Dark Slate Blue */
-    --muted: 210 30% 94%; /* Light Grayish Blue */
-    --muted-foreground: 220 20% 45%; /* Medium Slate Blue */
-    --accent: 190 70% 65%; /* Lighter Cyan/Teal for hovers */
+    --secondary: 40 100% 60%; /* Sunny Yellow-Orange */
+    --secondary-foreground: 30 10% 20%; /* Dark Warm Gray */
+    --muted: 45 20% 92%; /* Soft Beige */
+    --muted-foreground: 30 15% 45%; /* Medium Warm Gray */
+    --accent: 205 70% 60%; /* Lighter Sky Blue for hovers */
     --accent-foreground: 0 0% 100%; /* White */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 210 20% 88%; /* Slightly darker Light Grayish Blue */
-    --input: 210 20% 88%; /* Slightly darker Light Grayish Blue */
-    --ring: 190 70% 55%; /* Bright Cyan/Teal */
-    --chart-1: 190 70% 50%;
-    --chart-2: 30 90% 65%;
-    --chart-3: 210 60% 50%;
-    --chart-4: 270 70% 60%;
-    --chart-5: 50 80% 60%;
+    --destructive: 0 84.2% 60.2%; /* Standard Destructive Red */
+    --destructive-foreground: 0 0% 98%; /* Light Gray */
+    --border: 45 20% 85%; /* Soft Beige Border */
+    --input: 45 20% 85%; /* Soft Beige Input */
+    --ring: 205 70% 50%; /* Sky Blue Ring */
+
+    --chart-1: 205 70% 50%; /* Sky Blue */
+    --chart-2: 40 90% 65%; /* Sunny Yellow-Orange */
+    --chart-3: 160 60% 50%; /* Seafoam Green */
+    --chart-4: 25 70% 60%; /* Terracotta */
+    --chart-5: 300 50% 60%; /* Lavender */
     --radius: 0.5rem;
 
     /* Sidebar Light Theme */
-    --sidebar-background: 210 30% 96%; /* Slightly off Very Light Sky Blue */
-    --sidebar-foreground: 220 25% 25%; /* Dark Slate Blue */
-    --sidebar-primary: 190 70% 55%; /* Bright Cyan/Teal */
+    --sidebar-background: 45 30% 94%; /* Slightly darker Pale Yellow-Gray */
+    --sidebar-foreground: 30 10% 25%; /* Dark Warm Gray */
+    --sidebar-primary: 205 70% 50%; /* Sky Blue */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 190 70% 65%; /* Lighter Cyan/Teal */
+    --sidebar-accent: 205 70% 60%; /* Lighter Sky Blue */
     --sidebar-accent-foreground: 0 0% 100%; /* White */
-    --sidebar-border: 210 20% 85%;
-    --sidebar-ring: 190 70% 55%; /* Bright Cyan/Teal */
+    --sidebar-border: 45 20% 82%; /* Slightly darker Soft Beige Border */
+    --sidebar-ring: 205 70% 50%; /* Sky Blue Ring */
   }
 
   .dark {
-    --background: 220 25% 15%; /* Very Dark Desaturated Blue */
-    --foreground: 210 40% 95%; /* Light Grayish Blue */
-    --card: 220 25% 20%; /* Dark Slate Blue */
-    --card-foreground: 210 40% 95%; /* Light Grayish Blue */
-    --popover: 220 25% 20%; /* Dark Slate Blue */
-    --popover-foreground: 210 40% 95%; /* Light Grayish Blue */
-    --primary: 190 70% 60%; /* Bright Cyan/Teal - slightly lighter for dark mode */
-    --primary-foreground: 220 25% 10%; /* Very Dark Blue for contrast */
-    --secondary: 30 100% 65%; /* Soft Orange/Peach - slightly less intense */
-    --secondary-foreground: 210 40% 95%; /* Light Grayish Blue */
-    --muted: 220 20% 25%; /* Dark Grayish Blue */
-    --muted-foreground: 210 30% 70%; /* Lighter Grayish Blue */
-    --accent: 190 70% 50%; /* Slightly darker Cyan/Teal for hovers */
+    /* Dark Theme: Deep, Mysterious, Vibrant Accents */
+    --background: 220 15% 15%; /* Dark Desaturated Blue */
+    --foreground: 45 20% 90%; /* Light Beige */
+    --card: 220 15% 20%; /* Slightly Lighter Dark Desaturated Blue */
+    --card-foreground: 45 20% 90%; /* Light Beige */
+    --popover: 220 15% 20%; /* Slightly Lighter Dark Desaturated Blue */
+    --popover-foreground: 45 20% 90%; /* Light Beige */
+    --primary: 205 70% 55%; /* Sky Blue - slightly brighter for dark mode */
+    --primary-foreground: 220 15% 10%; /* Very Dark Blue for contrast */
+    --secondary: 40 100% 65%; /* Sunny Yellow-Orange - slightly brighter */
+    --secondary-foreground: 45 20% 90%; /* Light Beige */
+    --muted: 220 10% 25%; /* Darker Grayish Blue */
+    --muted-foreground: 45 15% 70%; /* Lighter Beige */
+    --accent: 205 70% 45%; /* Slightly darker Sky Blue for hovers */
     --accent-foreground: 0 0% 100%; /* White */
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 20% 30%; /* Slightly darker Dark Grayish Blue */
-    --input: 220 20% 30%; /* Slightly darker Dark Grayish Blue */
-    --ring: 190 70% 60%; /* Bright Cyan/Teal */
-    --chart-1: 190 60% 55%;
-    --chart-2: 30 80% 60%;
-    --chart-3: 210 50% 55%;
-    --chart-4: 270 60% 65%;
-    --chart-5: 50 70% 65%;
+    --destructive: 0 70% 50%; /* Standard Destructive Red */
+    --destructive-foreground: 0 0% 98%; /* Light Gray */
+    --border: 220 10% 30%; /* Dark Grayish Blue Border */
+    --input: 220 10% 30%; /* Dark Grayish Blue Input */
+    --ring: 205 70% 55%; /* Sky Blue Ring */
+
+    --chart-1: 205 60% 55%;
+    --chart-2: 40 80% 60%;
+    --chart-3: 160 50% 55%;
+    --chart-4: 25 60% 65%;
+    --chart-5: 300 40% 65%;
 
     /* Sidebar Dark Theme */
-    --sidebar-background: 220 25% 18%; /* Slightly distinct dark background */
-    --sidebar-foreground: 210 40% 95%; /* Light Grayish Blue */
-    --sidebar-primary: 190 70% 60%; /* Bright Cyan/Teal */
-    --sidebar-primary-foreground: 220 25% 10%;
-    --sidebar-accent: 190 70% 50%; /* Darker Cyan/Teal for hover */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 20% 30%;
-    --sidebar-ring: 190 70% 60%; /* Bright Cyan/Teal */
+    --sidebar-background: 220 15% 18%; /* Slightly distinct dark background */
+    --sidebar-foreground: 45 20% 90%; /* Light Beige */
+    --sidebar-primary: 205 70% 55%; /* Sky Blue */
+    --sidebar-primary-foreground: 220 15% 10%; /* Very Dark Blue */
+    --sidebar-accent: 205 70% 45%; /* Darker Sky Blue for hover */
+    --sidebar-accent-foreground: 0 0% 100%; /* White */
+    --sidebar-border: 220 10% 30%; /* Dark Grayish Blue Border */
+    --sidebar-ring: 205 70% 55%; /* Sky Blue Ring */
+  }
+  .theme {
+    --animate-line-shadow: line-shadow 15s linear infinite;
   }
 }
 
@@ -90,15 +94,14 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans); /* Ensure Geist Sans is primary */
+    cursor: none; /* Hide the default cursor */
   }
 }
 
 @layer utilities {
   .animate-bounce-fade-in {
     animation: bounce-fade-in 0.7s ease-out forwards;
-  }
-  .animate-spin-short {
-    animation: spin-short 0.5s ease-out;
   }
 }
 
@@ -120,7 +123,13 @@ body {
   }
 }
 
-@keyframes spin-short {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@theme inline {
+  @keyframes line-shadow {
+  0% {
+    background-position: 0 0;
+    }
+  100% {
+    background-position: 100% -100%;
+    }
+  }
 }
