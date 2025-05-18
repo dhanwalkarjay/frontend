@@ -95,7 +95,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-geist-sans); /* Ensure Geist Sans is primary */
-    cursor: none; /* Hide the default cursor */
   }
 }
 
@@ -125,11 +124,11 @@
 
 @theme inline {
   @keyframes line-shadow {
-  0% {
-    background-position: 0 0;
+    0% {
+      background-position: 0 0;
     }
-  100% {
-    background-position: 100% -100%;
+    100% {
+      background-position: 100% -100%;
     }
   }
 }

@@ -12,7 +12,7 @@ import React, {
 
 const generateRobustId = () =>
   Date.now().toString(36) + Math.random().toString(36).substring(2);
-const LOCAL_STORAGE_KEY = "tripBoard_v1"; // Updated key for new branding
+const LOCAL_STORAGE_KEY = "tripBoard_v2_singleBoard"; // Updated key for clarity
 const NEW_DEFAULT_FONT = "Comic Sans MS, cursive, sans-serif";
 const OLD_DEFAULT_FONT_PATTERNS = ["Arial", "Arial, sans-serif"];
 
@@ -21,20 +21,27 @@ interface CanvasContextType {
   selectedElementId: string | null;
   zoom: number;
   panOffset: { x: number; y: number };
+
+  // Element actions
   addElement: (
     type: CanvasElementData["type"],
     partialData?: Partial<CanvasElementData>
-  ) => string;
-  updateElement: (id: string, updates: Partial<CanvasElementData>) => void;
-  deleteElement: (id: string) => void;
-  selectElement: (id: string | null) => void;
-  bringToFront: (id: string) => void;
+  ) => string | null;
+  updateElement: (
+    elementId: string,
+    updates: Partial<CanvasElementData>
+  ) => void;
+  deleteElement: (elementId: string) => void;
+  selectElement: (elementId: string | null) => void;
+  bringToFront: (elementId: string) => void;
+
   setZoom: (zoomLevel: number | ((prevZoom: number) => number)) => void;
   setPanOffset: (
     offset:
       | { x: number; y: number }
       | ((prevOffset: { x: number; y: number }) => { x: number; y: number })
   ) => void;
+
   loadFromLocalStorage: () => void;
   clearBoard: () => void;
 }
@@ -53,14 +60,14 @@ interface CanvasProviderProps {
   children: ReactNode;
 }
 
-const defaultInitialElements: CanvasElementData[] = [
+const createDefaultElements = (): CanvasElementData[] => [
   {
     id: generateRobustId(),
     type: "text",
-    content: "My Awesome Trip!",
+    content: "Welcome to TripBoard!",
     x: 50,
     y: 50,
-    width: 250,
+    width: 350,
     height: 50,
     rotation: 0,
     zIndex: 1,
@@ -68,9 +75,8 @@ const defaultInitialElements: CanvasElementData[] = [
     textColor: "hsl(var(--foreground))",
     fontFamily: NEW_DEFAULT_FONT,
     isNewlyAdded: true,
-    placementTime: Date.now() - 10000, // A bit in the past
+    placementTime: Date.now() - 10000,
   },
-  // Removed the default image element
 ];
 
 interface StoredCanvasState {
@@ -100,50 +106,42 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
           const parsedState: StoredCanvasState = JSON.parse(savedState);
           if (
             parsedState.elements &&
+            Array.isArray(parsedState.elements) &&
             typeof parsedState.zoom === "number" &&
             parsedState.panOffset
           ) {
-            setElements(
-              parsedState.elements.map((el) => {
-                let fontFamily = el.fontFamily;
-                if (el.type === "text") {
-                  if (
-                    !fontFamily ||
-                    OLD_DEFAULT_FONT_PATTERNS.includes(fontFamily)
-                  ) {
-                    fontFamily = NEW_DEFAULT_FONT;
-                  }
+            const loadedElements = parsedState.elements.map((el) => {
+              let fontFamily = el.fontFamily;
+              if (el.type === "text") {
+                if (
+                  !fontFamily ||
+                  OLD_DEFAULT_FONT_PATTERNS.includes(fontFamily)
+                ) {
+                  fontFamily = NEW_DEFAULT_FONT;
                 }
-                return {
-                  ...el,
-                  fontFamily: fontFamily,
-                  textColor: el.textColor || "hsl(var(--foreground))",
-                  isNewlyAdded: false,
-                  placementTime: el.placementTime || Date.now(), // Add timestamp if missing
-                };
-              })
-            );
+              }
+              return {
+                ...el,
+                fontFamily: fontFamily,
+                textColor: el.textColor || "hsl(var(--foreground))",
+                isNewlyAdded: false,
+                placementTime: el.placementTime || Date.now(),
+                backgroundColor: el.backgroundColor,
+              };
+            });
+            setElements(loadedElements);
             setZoomState(parsedState.zoom);
             setPanOffsetState(parsedState.panOffset);
             setSelectedElementId(parsedState.selectedElementId || null);
           } else {
-            setElements(
-              defaultInitialElements.map((el) => ({
-                ...el,
-                isNewlyAdded: true,
-              }))
-            );
+            setElements(createDefaultElements());
           }
         } else {
-          setElements(
-            defaultInitialElements.map((el) => ({ ...el, isNewlyAdded: true }))
-          );
+          setElements(createDefaultElements());
         }
       } catch (error) {
         console.error("Failed to load canvas state from localStorage:", error);
-        setElements(
-          defaultInitialElements.map((el) => ({ ...el, isNewlyAdded: true }))
-        );
+        setElements(createDefaultElements());
       }
       setIsLoaded(true);
     }
@@ -208,6 +206,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
         | "stickerSize"
         | "data-ai-hint"
         | "placementTime"
+        | "backgroundColor"
       > & { type: ElementType; isNewlyAdded: boolean } = {
         id: newId,
         type,
@@ -263,26 +262,27 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
         default:
           throw new Error("Unknown element type");
       }
+
       setElements((prev) => [...prev, newElement]);
       setSelectedElementId(newElement.id);
       return newId;
     },
-    [getHighestZIndex, panOffset, zoom]
+    [getHighestZIndex, panOffset, zoom, elements]
   );
 
   const updateElement = useCallback(
-    (id: string, updates: Partial<CanvasElementData>) => {
+    (elementId: string, updates: Partial<CanvasElementData>) => {
       setElements((prev) =>
-        prev.map((el) => (el.id === id ? { ...el, ...updates } : el))
+        prev.map((el) => (el.id === elementId ? { ...el, ...updates } : el))
       );
     },
     []
   );
 
   const deleteElement = useCallback(
-    (id: string) => {
-      setElements((prev) => prev.filter((el) => el.id !== id));
-      if (selectedElementId === id) {
+    (elementId: string) => {
+      setElements((prev) => prev.filter((el) => el.id !== elementId));
+      if (selectedElementId === elementId) {
         setSelectedElementId(null);
       }
     },
@@ -290,18 +290,21 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   );
 
   const bringToFront = useCallback(
-    (id: string) => {
-      const currentElement = elements.find((el) => el.id === id);
+    (elementId: string) => {
+      const currentElement = elements.find((el) => el.id === elementId);
       if (!currentElement) return;
 
-      const highestZIndex = getHighestZIndex();
+      const highestZIndexOnBoard = getHighestZIndex();
 
-      if (currentElement.zIndex <= highestZIndex || elements.length === 1) {
+      if (
+        currentElement.zIndex <= highestZIndexOnBoard ||
+        elements.length === 1
+      ) {
         setElements((prevElements) =>
           prevElements
             .map((el) => {
-              if (el.id === id) {
-                return { ...el, zIndex: highestZIndex + 1 };
+              if (el.id === elementId) {
+                return { ...el, zIndex: highestZIndexOnBoard + 1 };
               }
               return el;
             })
@@ -341,9 +344,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   );
 
   const clearBoard = useCallback(() => {
-    setElements(
-      defaultInitialElements.map((el) => ({ ...el, isNewlyAdded: true }))
-    );
+    setElements(createDefaultElements());
     setZoomState(1);
     setPanOffsetState({ x: 0, y: 0 });
     setSelectedElementId(null);

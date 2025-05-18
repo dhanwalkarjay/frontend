@@ -27,4 +27,14 @@ export interface CanvasElementData {
 
   // For time-based placement
   placementTime?: number; // Unix timestamp
+
+  // For custom element background color
+  backgroundColor?: string; // Hex color, e.g., #RRGGBB
 }
+
+// PageData is no longer needed for a single-board experience
+// export interface PageData {
+//   id: string;
+//   title: string;
+//   elements: CanvasElementData[];
+// }

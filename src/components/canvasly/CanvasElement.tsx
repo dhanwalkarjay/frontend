@@ -8,7 +8,8 @@ import { useDraggable } from "@/hooks/useDraggable";
 import { cn } from "@/lib/utils";
 import { Trash2Icon, Edit3Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { CardContainer, CardItem } from "@/components/ui/3d-card-effect";
 
 interface CanvasElementProps {
   element: CanvasElementData;
@@ -28,9 +29,9 @@ const resizeHandleConfig: Array<{ id: ResizeHandleType; classes: string }> = [
   { id: "br", classes: "-bottom-1.5 -right-1.5" },
 ];
 
-const MIN_DIMENSION = 20; // Minimum width/height for an element
+const MIN_DIMENSION = 20;
 const DEFAULT_TEXT_FONT_FAMILY = "Comic Sans MS, cursive, sans-serif";
-const PADDING_AROUND_TEXT_PX = 4; // Corresponds to p-1 (0.25rem * 16px/rem)
+const PADDING_AROUND_TEXT_PX = 0;
 
 export function CanvasElement({
   element,
@@ -45,8 +46,8 @@ export function CanvasElement({
     bringToFront,
   } = useCanvas();
   const isSelected = selectedElementId === element.id;
-  const elementRef = useRef<HTMLDivElement>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const positionedElementRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isEditingText, setIsEditingText] = useState(false);
   const [editText, setEditText] = useState(element.content);
 
@@ -68,9 +69,10 @@ export function CanvasElement({
   } = useDraggable({
     initialX: element.x,
     initialY: element.y,
-    elementRef,
+    elementRef: positionedElementRef,
     bounds: canvasBoundsRef,
     onDragStart: () => {
+      if (isResizing) return;
       if (selectedElementId !== element.id) {
         selectElement(element.id);
       } else {
@@ -78,30 +80,31 @@ export function CanvasElement({
       }
     },
     onDragEnd: (x, y) => {
-      if (!isResizing) {
-        updateElement(element.id, { x, y });
-      }
+      if (isResizing) return;
+      updateElement(element.id, { x, y });
     },
   });
 
   useEffect(() => {
-    if (elementRef.current && element.isNewlyAdded) {
-      const el = elementRef.current;
+    if (positionedElementRef.current && element.isNewlyAdded) {
+      const el = positionedElementRef.current;
       el.classList.add("animate-bounce-fade-in");
       const timer = setTimeout(() => {
-        if (el.classList.contains("animate-bounce-fade-in")) {
+        if (el?.classList.contains("animate-bounce-fade-in")) {
           el.classList.remove("animate-bounce-fade-in");
         }
-        updateElement(element.id, { isNewlyAdded: false });
+        if (element.isNewlyAdded) {
+          updateElement(element.id, { isNewlyAdded: false });
+        }
       }, 700);
       return () => clearTimeout(timer);
     }
   }, [element.isNewlyAdded, element.id, updateElement]);
 
   useEffect(() => {
-    if (isEditingText && textAreaRef.current) {
-      textAreaRef.current.focus();
-      textAreaRef.current.select();
+    if (isEditingText && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
     }
   }, [isEditingText]);
 
@@ -110,47 +113,6 @@ export function CanvasElement({
       setEditText(element.content);
     }
   }, [element.content, isEditingText]);
-
-  // Auto-adjust height for text elements
-  useEffect(() => {
-    if (element.type === "text" && !isEditingText && elementRef.current) {
-      const measureDiv = document.createElement("div");
-      measureDiv.style.fontFamily =
-        element.fontFamily || DEFAULT_TEXT_FONT_FAMILY;
-      measureDiv.style.fontSize = `${element.fontSize || 16}px`;
-      measureDiv.style.whiteSpace = "pre-wrap";
-      measureDiv.style.padding = `${PADDING_AROUND_TEXT_PX}px`;
-      measureDiv.style.boxSizing = "border-box";
-      measureDiv.style.width = `${element.width}px`;
-
-      measureDiv.style.visibility = "hidden";
-      measureDiv.style.position = "absolute";
-      measureDiv.style.left = "-9999px";
-      measureDiv.style.top = "-9999px";
-
-      measureDiv.textContent = element.content || "\u00A0"; // Use non-breaking space if content is empty
-
-      document.body.appendChild(measureDiv);
-      let newMeasuredHeight = measureDiv.offsetHeight;
-      document.body.removeChild(measureDiv);
-
-      newMeasuredHeight = Math.max(newMeasuredHeight, MIN_DIMENSION);
-
-      if (Math.abs(newMeasuredHeight - element.height) > 1) {
-        // Add a small tolerance
-        updateElement(element.id, { height: newMeasuredHeight });
-      }
-    }
-  }, [
-    element.content,
-    element.fontSize,
-    element.fontFamily,
-    element.width,
-    element.type,
-    isEditingText,
-    updateElement,
-    element.height,
-  ]);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -167,7 +129,7 @@ export function CanvasElement({
     }
   };
 
-  const handleTextEditChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditText(e.target.value);
   };
 
@@ -176,37 +138,35 @@ export function CanvasElement({
     updateElement(element.id, { content: editText });
   };
 
-  const handleTextEditKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>
-  ) => {
+  const handleTextEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleTextEditBlur();
     }
     if (e.key === "Escape") {
       setIsEditingText(false);
-      setEditText(element.content); // Revert to original content
+      setEditText(element.content);
     }
   };
 
   const handleElementMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isEditingText) {
+    if (!isEditingText && !isResizing) {
       handleDragMouseDown(e);
     }
     if (selectedElementId !== element.id && !isEditingText) {
       selectElement(element.id);
-    } else if (isSelected && !isEditingText) {
+    } else if (isSelected && !isEditingText && !isResizing) {
       bringToFront(element.id);
     }
   };
 
   const handleElementTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isEditingText) {
+    if (!isEditingText && !isResizing) {
       handleTouchStartDraggable(e);
     }
     if (selectedElementId !== element.id && !isEditingText) {
       selectElement(element.id);
-    } else if (isSelected && !isEditingText) {
+    } else if (isSelected && !isEditingText && !isResizing) {
       bringToFront(element.id);
     }
   };
@@ -214,9 +174,6 @@ export function CanvasElement({
   const startResize = useCallback(
     (clientX: number, clientY: number, handleId: ResizeHandleType) => {
       setIsResizing(true);
-      // const handleDetails = resizeHandleConfig.find(h => h.id === handleId); // No longer needed for cursor
-      // document.body.style.cursor = handleDetails?.cursor || 'default'; // Removed custom body cursor
-
       resizeStartDataRef.current = {
         handleId,
         initialClientX: clientX,
@@ -257,7 +214,6 @@ export function CanvasElement({
     const handleGlobalMouseMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizing || !resizeStartDataRef.current) return;
       e.preventDefault();
-
       const {
         handleId,
         initialClientX,
@@ -271,58 +227,36 @@ export function CanvasElement({
       const currentClientX = "touches" in e ? e.touches[0].clientX : e.clientX;
       const currentClientY = "touches" in e ? e.touches[0].clientY : e.clientY;
 
-      const dxScreen = currentClientX - initialClientX;
-      const dyScreen = currentClientY - initialClientY;
-
-      const dxWorld = dxScreen / zoom;
-      const dyWorld = dyScreen / zoom;
+      const deltaX = (currentClientX - initialClientX) / zoom;
+      const deltaY = (currentClientY - initialClientY) / zoom;
 
       let newX = elementInitialX;
       let newY = elementInitialY;
       let newWidth = elementInitialWidth;
       let newHeight = elementInitialHeight;
 
-      // Handle resizing logic based on which handle is dragged
+      if (handleId.includes("r"))
+        newWidth = Math.max(MIN_DIMENSION, elementInitialWidth + deltaX);
       if (handleId.includes("l")) {
-        newWidth = elementInitialWidth - dxWorld;
-        newX = elementInitialX + dxWorld;
-      } else if (handleId.includes("r")) {
-        newWidth = elementInitialWidth + dxWorld;
+        const potentialNewWidth = elementInitialWidth - deltaX;
+        newWidth = Math.max(MIN_DIMENSION, potentialNewWidth);
+        newX = elementInitialX + (elementInitialWidth - newWidth);
       }
-
+      if (handleId.includes("b"))
+        newHeight = Math.max(MIN_DIMENSION, elementInitialHeight + deltaY);
       if (handleId.includes("t")) {
-        newHeight = elementInitialHeight - dyWorld;
-        newY = elementInitialY + dyWorld;
-      } else if (handleId.includes("b")) {
-        newHeight = elementInitialHeight + dyWorld;
+        const potentialNewHeight = elementInitialHeight - deltaY;
+        newHeight = Math.max(MIN_DIMENSION, potentialNewHeight);
+        newY = elementInitialY + (elementInitialHeight - newHeight);
       }
-
-      // Enforce minimum dimensions
-      if (newWidth < MIN_DIMENSION) {
-        if (handleId.includes("l")) {
-          newX = elementInitialX + (elementInitialWidth - MIN_DIMENSION);
-        }
-        newWidth = MIN_DIMENSION;
-      }
-      if (newHeight < MIN_DIMENSION) {
-        if (handleId.includes("t")) {
-          newY = elementInitialY + (elementInitialHeight - MIN_DIMENSION);
-        }
-        newHeight = MIN_DIMENSION;
-      }
-
-      // Prevent position change if only height or width is being adjusted by middle handles
       if (handleId === "tm" || handleId === "bm") {
-        // Top-middle or bottom-middle
         newX = elementInitialX;
         newWidth = elementInitialWidth;
       }
       if (handleId === "ml" || handleId === "mr") {
-        // Middle-left or middle-right
         newY = elementInitialY;
         newHeight = elementInitialHeight;
       }
-
       updateElement(element.id, {
         x: newX,
         y: newY,
@@ -330,45 +264,31 @@ export function CanvasElement({
         height: newHeight,
       });
     };
-
     const handleGlobalMouseUpOrTouchEnd = () => {
       if (isResizing) {
         setIsResizing(false);
         resizeStartDataRef.current = null;
-        // document.body.style.cursor = 'default'; // Removed custom body cursor
       }
     };
 
     if (isResizing) {
       document.addEventListener("mousemove", handleGlobalMouseMove);
+      document.addEventListener("touchmove", handleGlobalMouseMove, {
+        passive: false,
+      });
       document.addEventListener("mouseup", handleGlobalMouseUpOrTouchEnd);
-      document.addEventListener(
-        "touchmove",
-        handleGlobalMouseMove as EventListener,
-        { passive: false }
-      );
       document.addEventListener("touchend", handleGlobalMouseUpOrTouchEnd);
       document.addEventListener("touchcancel", handleGlobalMouseUpOrTouchEnd);
-      document.body.style.userSelect = "none"; // Keep user-select prevention
     }
-
     return () => {
       document.removeEventListener("mousemove", handleGlobalMouseMove);
+      document.removeEventListener("touchmove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUpOrTouchEnd);
-      document.removeEventListener(
-        "touchmove",
-        handleGlobalMouseMove as EventListener
-      );
       document.removeEventListener("touchend", handleGlobalMouseUpOrTouchEnd);
       document.removeEventListener(
         "touchcancel",
         handleGlobalMouseUpOrTouchEnd
       );
-      if (isResizing) {
-        // Only reset if it was resizing
-        // document.body.style.cursor = 'default'; // Removed custom body cursor
-        document.body.style.userSelect = "";
-      }
     };
   }, [isResizing, updateElement, element.id, zoom]);
 
@@ -386,33 +306,35 @@ export function CanvasElement({
               (element["data-ai-hint"] as string) || "placeholder image"
             }
             draggable={false}
-            priority={true} // Consider making this conditional if many images
+            priority={true}
           />
         );
       case "text":
         if (isEditingText) {
           return (
-            <Textarea
-              ref={textAreaRef}
+            <Input
+              ref={inputRef}
+              type="text"
               value={editText}
               onChange={handleTextEditChange}
               onBlur={handleTextEditBlur}
               onKeyDown={handleTextEditKeyDown}
-              className="w-full h-full p-1 bg-background border-dashed border-primary/50 resize-none focus:ring-1 focus:ring-primary text-foreground"
+              className="w-full h-full bg-transparent border-dashed border-primary/50 text-foreground p-0"
               style={{
                 fontSize: `${element.fontSize || 16}px`,
                 color: element.textColor || "hsl(var(--foreground))",
                 fontFamily: element.fontFamily || DEFAULT_TEXT_FONT_FAMILY,
+                backgroundColor: "transparent",
               }}
-              onClick={(e) => e.stopPropagation()} // Prevent canvas click through
-              onMouseDown={(e) => e.stopPropagation()} // Prevent drag start
-              onTouchStart={(e) => e.stopPropagation()} // Prevent touch drag start
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
             />
           );
         }
         return (
           <div
-            className="w-full h-full flex items-center justify-center p-1 break-words overflow-hidden whitespace-pre-wrap select-none" // Added select-none
+            className="w-full h-full flex items-center justify-center break-words overflow-hidden whitespace-pre-wrap select-none p-0"
             style={{
               fontSize: `${element.fontSize || 16}px`,
               color: element.textColor || "hsl(var(--foreground))",
@@ -425,7 +347,7 @@ export function CanvasElement({
       case "sticker":
         return (
           <div
-            className="w-full h-full flex items-center justify-center pointer-events-none select-none" // Added select-none
+            className="w-full h-full flex items-center justify-center pointer-events-none select-none"
             style={{ fontSize: `${element.stickerSize || 48}px` }}
           >
             {element.content}
@@ -443,17 +365,7 @@ export function CanvasElement({
 
   return (
     <div
-      ref={elementRef}
-      className={cn(
-        "absolute select-none group",
-        "flex items-center justify-center",
-        "bg-card/70 backdrop-blur-sm rounded-md",
-        isSelected
-          ? "ring-2 ring-primary ring-offset-1 ring-offset-background shadow-xl border-primary/50"
-          : "shadow-md hover:shadow-lg border border-transparent hover:border-primary/30",
-        element.type === "text" && !isEditingText && "hover:bg-accent/20"
-        // Removed !isResizing && "cursor-grab"
-      )}
+      ref={positionedElementRef}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -461,6 +373,7 @@ export function CanvasElement({
         height: `${element.height}px`,
         transform: `rotate(${element.rotation}deg)`,
         zIndex: effectiveZIndex,
+        position: "absolute",
       }}
       onMouseDown={isResizing ? undefined : handleElementMouseDown}
       onTouchStart={isResizing ? undefined : handleElementTouchStart}
@@ -470,54 +383,100 @@ export function CanvasElement({
           : undefined
       }
       data-element-id={element.id}
-      data-drag-handle={!isEditingText && !isResizing} // This attribute helps useDraggable differentiate
+      data-drag-handle={!isEditingText && !isResizing}
+      className="group"
     >
-      {renderContent()}
-      {isSelected && !isEditingText && (
-        <>
-          <Button
-            variant="default"
-            size="icon"
-            className="absolute -top-4 -right-4 h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100 z-10"
-            onClick={handleDelete}
-            onMouseDown={(e) => e.stopPropagation()} // Prevent drag
-            onTouchStart={(e) => e.stopPropagation()} // Prevent touch drag
-            aria-label="Delete element"
-          >
-            <Trash2Icon className="h-4 w-4" />
-          </Button>
-          {element.type === "text" && (
-            <Button
-              variant="default"
-              size="icon"
-              className="absolute -bottom-4 -right-4 h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100 z-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDoubleClick();
-              }}
-              onMouseDown={(e) => e.stopPropagation()} // Prevent drag
-              onTouchStart={(e) => e.stopPropagation()} // Prevent touch drag
-              aria-label="Edit text"
-            >
-              <Edit3Icon className="h-4 w-4" />
-            </Button>
-          )}
+      <CardContainer
+        containerClassName="w-full h-full"
+        className={cn(
+          "w-full h-full flex items-center justify-center select-none",
+          !element.backgroundColor && "bg-card",
+          "backdrop-blur-sm rounded-md",
+          isSelected
+            ? isEditingText
+              ? "shadow-xl"
+              : isResizing
+              ? "shadow-xl border border-primary/50"
+              : "ring-2 ring-primary ring-offset-1 ring-offset-background shadow-xl border-primary/50"
+            : "shadow-md hover:shadow-lg border border-transparent hover:border-primary/30",
+          element.type === "text" && !isEditingText && "hover:bg-accent/20"
+        )}
+      >
+        <CardItem
+          className="w-full h-full flex items-center justify-center"
+          translateZ={element.type === "image" ? 50 : 30}
+          style={{
+            ...(element.backgroundColor && {
+              backgroundColor: element.backgroundColor,
+            }),
+            pointerEvents:
+              element.type === "text" && !isEditingText ? "none" : "auto",
+          }}
+        >
+          {renderContent()}
+        </CardItem>
 
-          {resizeHandleConfig.map((handle) => (
-            <div
-              key={handle.id}
-              className={cn(
-                "absolute w-3 h-3 bg-background border border-primary rounded-sm",
-                "opacity-0 group-hover:opacity-100", // Show handles on group hover (element hover)
-                handle.classes
-              )}
-              style={{ zIndex: 5 }} // Removed specific cursor style
-              onMouseDown={(e) => handleMouseDownResize(e, handle.id)}
-              onTouchStart={(e) => handleTouchStartResize(e, handle.id)}
-            />
-          ))}
-        </>
-      )}
+        {isSelected && !isEditingText && (
+          <>
+            <CardItem
+              className="!absolute -top-4 -right-4 z-10"
+              translateZ={20}
+            >
+              <Button
+                variant="default"
+                size="icon"
+                className="h-8 w-8 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-1 shadow-lg opacity-0 group-hover:opacity-100"
+                onClick={handleDelete}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                aria-label="Delete element"
+              >
+                <Trash2Icon className="h-4 w-4" />
+              </Button>
+            </CardItem>
+
+            {element.type === "text" && (
+              <CardItem
+                className="!absolute -bottom-4 -right-4 z-10"
+                translateZ={20}
+              >
+                <Button
+                  variant="default"
+                  size="icon"
+                  className="h-8 w-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90 p-1 shadow-lg opacity-0 group-hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDoubleClick();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  aria-label="Edit text"
+                >
+                  <Edit3Icon className="h-4 w-4" />
+                </Button>
+              </CardItem>
+            )}
+
+            {resizeHandleConfig.map((handle) => (
+              <CardItem
+                key={handle.id}
+                className={cn("!absolute", handle.classes)}
+                style={{ zIndex: 5 }}
+                translateZ={15}
+              >
+                <div
+                  className={cn(
+                    "w-3 h-3 bg-background border border-primary rounded-sm",
+                    "opacity-0 group-hover:opacity-100"
+                  )}
+                  onMouseDown={(e) => handleMouseDownResize(e, handle.id)}
+                  onTouchStart={(e) => handleTouchStartResize(e, handle.id)}
+                />
+              </CardItem>
+            ))}
+          </>
+        )}
+      </CardContainer>
     </div>
   );
 }

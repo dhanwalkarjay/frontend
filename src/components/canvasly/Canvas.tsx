@@ -18,7 +18,7 @@ export function Canvas() {
     setZoom,
     panOffset,
     setPanOffset,
-  } = useCanvas();
+  } = useCanvas(); // Changed from pages/activePageId
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
 
@@ -26,6 +26,8 @@ export function Canvas() {
   const [isPanningTouch, setIsPanningTouch] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [initialPanOffset, setInitialPanOffset] = useState({ x: 0, y: 0 });
+
+  const elementsToRender = elements; // Elements directly from context
 
   const handleWheel = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
@@ -94,21 +96,18 @@ export function Canvas() {
     if (!viewport) return;
 
     if (isPanning) {
-      // viewport.style.cursor = 'grabbing'; // Removed
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "none";
+      // document.body.style.userSelect = 'none'; // Removed as cursor:none is active
     } else {
-      // viewport.style.cursor = 'grab'; // Removed
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "";
+      // document.body.style.userSelect = ''; // Removed
     }
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "";
-      // if (viewport) viewport.style.cursor = 'default'; // Removed
+      // document.body.style.userSelect = ''; // Removed
     };
   }, [isPanning, handleMouseMove, handleMouseUp]);
 
@@ -174,12 +173,6 @@ export function Canvas() {
     };
   }, [isPanningTouch, handleTouchMove, handleTouchEnd]);
 
-  // useEffect(() => { // Removed initial cursor setting
-  //   if (canvasViewportRef.current) {
-  //     canvasViewportRef.current.style.cursor = 'grab';
-  //   }
-  // }, []);
-
   return (
     <div
       id="canvas-viewport-for-export"
@@ -209,7 +202,7 @@ export function Canvas() {
           height: "1px",
         }}
       >
-        {elements
+        {elementsToRender
           .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
           .map((element) => (
             <CanvasElement
@@ -219,10 +212,10 @@ export function Canvas() {
             />
           ))}
       </div>
-      {elements.length === 0 && (
+      {elementsToRender.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground text-lg pointer-events-none space-y-2">
           <LayersIcon className="w-16 h-16 opacity-50" />
-          <p className="font-medium">Your canvas is empty.</p>
+          <p className="font-medium">This canvas is empty.</p>
           <p className="text-sm">Add elements using the toolbar!</p>
         </div>
       )}
